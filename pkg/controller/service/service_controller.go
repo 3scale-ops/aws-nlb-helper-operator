@@ -12,9 +12,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -45,18 +47,34 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for changes to primary resource Service
-	err = c.Watch(&source.Kind{Type: &corev1api.Service{}}, &handler.EnqueueRequestForObject{})
-	if err != nil {
-		return err
+	filter := predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			switch o := e.Object.(type) {
+			case *corev1.Service:
+				if o.Spec.Type == "LoadBalancer" {
+					return true
+				}
+			}
+			return false
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			switch o := e.ObjectNew.(type) {
+			case *corev1.Service:
+				if o.Spec.Type == "LoadBalancer" {
+					// Ignore updates to resource status in which case metadata.Generation does not change
+					return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
+				}
+			}
+			return false
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			// Ignore delete function as the LoadBalancer will be deleted by the AWS controller
+			return false
+		},
 	}
 
-	// TODO(user): Modify this to be the types you create that are owned by the primary resource
-	// Watch for changes to secondary resource Pods and requeue the owner Service
-	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &corev1api.Service{},
-	})
+	// Watch for changes to primary resource Service
+	err = c.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestForObject{}, filter)
 	if err != nil {
 		return err
 	}
@@ -87,7 +105,7 @@ func (r *ReconcileService) Reconcile(request reconcile.Request) (reconcile.Resul
 	reqLogger.Info("Reconciling Service")
 
 	// Fetch the Service instance
-	instance := &corev1api.Service{}
+	instance := &corev1.Service{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
