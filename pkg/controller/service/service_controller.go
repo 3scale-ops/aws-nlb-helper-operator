@@ -67,12 +67,14 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
+	log.Info("Looking for Services with an aws-nlb-helper annotation")
+
 	filter := predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			switch o := e.Object.(type) {
 			case *corev1.Service:
 				if o.Spec.Type == "LoadBalancer" {
-					return true
+					return hasHelperAnnotation(e.Meta.GetAnnotations())
 				}
 			}
 			return false
@@ -80,9 +82,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			switch o := e.ObjectNew.(type) {
 			case *corev1.Service:
-				if o.Spec.Type == "LoadBalancer" {
-					// Ignore updates to resource status in which case metadata.Generation does not change
-					return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
+				// Ignore updates to resource status in which case metadata.Generation does not change
+				if e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration() {
+					if o.Spec.Type == "LoadBalancer" {
+						return hasHelperAnnotation(e.MetaNew.GetAnnotations())
+					}
 				}
 			}
 			return false
