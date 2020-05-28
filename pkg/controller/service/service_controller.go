@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -39,6 +40,11 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileService{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
+// hasHelperAnnotation gets the json serialized taints data from Pod.Annotations
+// and converts it to the []Taint type in api.
+func hasHelperAnnotation(annotations map[string]string) bool {
+	return len(getHelperAnnotations(annotations)) > 0
+}
 
 // getHelperAnnotations gets the json serialized taints data from Pod.Annotations
 // and converts it to the []Taint type in api.
