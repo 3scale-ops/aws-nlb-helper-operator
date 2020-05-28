@@ -19,6 +19,7 @@ import (
 )
 
 const (
+	helperAnnotationPrefix                = "aws-nlb-helper.3scale.net"
 	awsLoadBalancerTypeAnnotationKey      = "service.beta.kubernetes.io/aws-load-balancer-type"
 	awsLoadBalancerTypeNLBAnnotationValue = "nlb"
 	awsLoadBalancerTypeELBAnnotationValue = "elb"
