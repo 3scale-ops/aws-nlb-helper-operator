@@ -144,5 +144,8 @@ func (r *ReconcileService) Reconcile(request reconcile.Request) (reconcile.Resul
 		return reconcile.Result{}, err
 	}
 
+	// Get `kubernetes.io/service-name` tag value
+	serviceNameTagValue := request.Namespace + "/" + request.Name
+
 	return reconcile.Result{}, nil
 }
