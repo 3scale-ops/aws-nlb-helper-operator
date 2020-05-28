@@ -19,7 +19,9 @@ import (
 )
 
 const (
-	helperAnnotationPrefix = "aws-nlb-helper.3scale.net"
+	awsLoadBalancerTypeAnnotationKey      = "service.beta.kubernetes.io/aws-load-balancer-type"
+	awsLoadBalancerTypeNLBAnnotationValue = "nlb"
+	awsLoadBalancerTypeELBAnnotationValue = "elb"
 )
 
 var log = logf.Log.WithName("controller_service")
@@ -147,5 +149,12 @@ func (r *ReconcileService) Reconcile(request reconcile.Request) (reconcile.Resul
 	// Get `kubernetes.io/service-name` tag value
 	serviceNameTagValue := request.Namespace + "/" + request.Name
 
+	// Get the AWS Load Balancer type
+	awsLoadBalancerType := svc.GetAnnotations()[awsLoadBalancerTypeAnnotationKey]
+	if awsLoadBalancerType == "" {
+		reqLogger.Info("AWS load balancer annotation key is missing, defaulting to `elb`", "awsLoadBalancerTypeAnnotationKey", awsLoadBalancerTypeAnnotationKey)
+		awsLoadBalancerType = awsLoadBalancerTypeELBAnnotationValue
+	}
+	reqLogger.Info("AWS load balancer type set", "awsLoadBalancerType", awsLoadBalancerType)
 	return reconcile.Result{}, nil
 }
