@@ -40,23 +40,30 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileService{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
-// hasHelperAnnotation gets the json serialized taints data from Pod.Annotations
-// and converts it to the []Taint type in api.
+// hasHelperAnnotation returns true if the annotations list contains at
+// least one aws-nlb-hepler annotation.
 func hasHelperAnnotation(annotations map[string]string) bool {
 	return len(getHelperAnnotations(annotations)) > 0
 }
 
-// getHelperAnnotations gets the json serialized taints data from Pod.Annotations
-// and converts it to the []Taint type in api.
+// getHelperAnnotations gets a map of strings with all the annotations matching
+// the helperAnnotationPrefix prefix using getAnnotationsByPrefix()
 func getHelperAnnotations(annotations map[string]string) map[string]string {
-	helperAnnotations := make(map[string]string)
+	return getAnnotationsByPrefix(annotations, helperAnnotationPrefix)
+}
+
+// getAnnotationsByPrefix gets a map of strings with all the annotations matching
+// the annotationPrefix.
+func getAnnotationsByPrefix(annotations map[string]string, annotationPrefix string) map[string]string {
+	matchingAnnotations := make(map[string]string)
+	gabpLogger := log.WithValues("AnnotationPrefix", annotationPrefix)
 	for key, value := range annotations {
-		if strings.HasPrefix(key, helperAnnotationPrefix) {
-			log.Info("AWS NFS Helper Annotation found", "AnnotationKey", key, "AnnotationValue", value)
-			helperAnnotations[key] = value
+		if strings.HasPrefix(key, annotationPrefix) {
+			gabpLogger.Info("Matching annotations found", "AnnotationKey", key, "AnnotationValue", value)
+			matchingAnnotations[key] = value
 		}
 	}
-	return helperAnnotations
+	return matchingAnnotations
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
