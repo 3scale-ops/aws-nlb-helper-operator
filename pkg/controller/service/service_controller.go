@@ -17,6 +17,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+const (
+	helperAnnotationPrefix = "aws-nlb-helper.3scale.net"
+)
+
 var log = logf.Log.WithName("controller_service")
 
 /**
@@ -33,6 +37,20 @@ func Add(mgr manager.Manager) error {
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileService{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+}
+
+
+// getHelperAnnotations gets the json serialized taints data from Pod.Annotations
+// and converts it to the []Taint type in api.
+func getHelperAnnotations(annotations map[string]string) map[string]string {
+	helperAnnotations := make(map[string]string)
+	for key, value := range annotations {
+		if strings.HasPrefix(key, helperAnnotationPrefix) {
+			log.Info("AWS NFS Helper Annotation found", "AnnotationKey", key, "AnnotationValue", value)
+			helperAnnotations[key] = value
+		}
+	}
+	return helperAnnotations
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
