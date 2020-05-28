@@ -20,6 +20,7 @@ import (
 
 const (
 	helperAnnotationPrefix                = "aws-nlb-helper.3scale.net"
+	helperAnnotationProxyProcotolKey      = "aws-nlb-helper.3scale.net/enable-proxy-protocol"
 	awsLoadBalancerTypeAnnotationKey      = "service.beta.kubernetes.io/aws-load-balancer-type"
 	awsLoadBalancerTypeNLBAnnotationValue = "nlb"
 	awsLoadBalancerTypeELBAnnotationValue = "elb"
@@ -161,5 +162,6 @@ func (r *ReconcileService) Reconcile(request reconcile.Request) (reconcile.Resul
 	awsLoadBalancerIngressHostname := svc.Status.LoadBalancer.Ingress[0].Hostname
 	reqLogger.Info("AWS load balancer type set", "awsLoadBalancerDNS", awsLoadBalancerIngressHostname)
 
+	enableProxyProtocol := svc.GetAnnotations()[helperAnnotationProxyProcotolKey] == "true"
 	return reconcile.Result{}, nil
 }
