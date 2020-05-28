@@ -157,5 +157,9 @@ func (r *ReconcileService) Reconcile(request reconcile.Request) (reconcile.Resul
 		awsLoadBalancerType = awsLoadBalancerTypeELBAnnotationValue
 	}
 	reqLogger.Info("AWS load balancer type set", "awsLoadBalancerType", awsLoadBalancerType)
+
+	awsLoadBalancerIngressHostname := svc.Status.LoadBalancer.Ingress[0].Hostname
+	reqLogger.Info("AWS load balancer type set", "awsLoadBalancerDNS", awsLoadBalancerIngressHostname)
+
 	return reconcile.Result{}, nil
 }
