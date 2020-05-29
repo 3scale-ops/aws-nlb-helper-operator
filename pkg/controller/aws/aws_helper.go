@@ -101,3 +101,25 @@ func generateTagFilters(tags map[string]string) []*resourcegroupstaggingapi.TagF
 	}
 	return tagFilters
 }
+
+
+// getResourcesByFilter returns a list of arn of resources matching the filters
+func (awsc *AWSClient) getResourcesByFilter(tagFilters []*resourcegroupstaggingapi.TagFilter, resourceTypeFilters []*string) ([]string, error) {
+
+	getResourcesInput := &resourcegroupstaggingapi.GetResourcesInput{
+		TagFilters:          tagFilters,
+		ResourceTypeFilters: resourceTypeFilters,
+	}
+
+	resources, err := awsc.rgtapi.GetResources(getResourcesInput)
+	if err != nil {
+		println(err.Error())
+		return nil, err
+	}
+
+	arns := []string{}
+	for _, resource := range resources.ResourceTagMappingList {
+		arns = append(arns, *resource.ResourceARN)
+	}
+	return arns, nil
+}
