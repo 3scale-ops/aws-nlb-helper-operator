@@ -47,6 +47,13 @@ func UpdateLoadBalancer(clusterIDTagKey string, serviceNameTagValue string, load
 		return false, err
 	}
 
+	// Generate resource tags map
+	tags := map[string]string{
+		"kubernetes.io/service-name":                             serviceNameTagValue,
+		fmt.Sprintf("kubernetes.io/cluster/%s", clusterIDTagKey): "owned",
+	}
+	ulbLogger.Info("Looking for tagged resources", "Tags", tags)
+
 	return awsClient != nil, nil
 }
 
