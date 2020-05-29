@@ -27,6 +27,29 @@ type LoadBalancerAttributes struct {
 	TargetGroupStickness              bool
 	TargetGroupProxyProtocol          bool
 }
+
+// UpdateLoadBalancer updates an AWS load balancer
+func UpdateLoadBalancer(clusterIDTagKey string, serviceNameTagValue string, loadBalancerAttributes LoadBalancerAttributes) (bool, error) {
+	ulbLogger := log.WithValues("ClusterId", clusterIDTagKey, "ServiceName", serviceNameTagValue)
+
+	// Get AWS Clients for ELBV2 and ResourceGroupsTaggingAPI APIs
+	awsClient, err := newAWSClient(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		os.Getenv("AWS_REGION"),
+	)
+
+	if err != nil {
+		ulbLogger.Error(err, "Unable to create AWS Client",
+			"AWS_ACCESS_KEY_ID", os.Getenv("AWS_ACCESS_KEY_ID"),
+			"AWS_REGION", os.Getenv("AWS_REGION"),
+		)
+		return false, err
+	}
+
+	return awsClient != nil, nil
+}
+
 // newAWSClient obtains an AWS session and initiates the needed AWS clients.
 func newAWSClient(id string, secret string, region string) (*AWSClient, error) {
 
