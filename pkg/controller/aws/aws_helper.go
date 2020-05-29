@@ -83,15 +83,13 @@ func UpdateNetworkLoadBalancer(loadBalancerDNS string, serviceNameTagValue strin
 	ulbLogger.Info("Load balancer matching tags and DNS found", "LoadBalancerARN", loadBalancerARN, "LoadBalancerDNS", loadBalancerDNS)
 	awsClient.updateNetworkLoadBalancerAttributes(loadBalancerARN, loadBalancerAttributes)
 
-		targetGroupARNs, err := awsClient.getTargetGroupsByLoadBalancer(loadBalancerARN)
-		if err != nil {
-			ulbLogger.Info("Unable to obtain load balancer target groups", "loadBalancerARN", loadBalancerARN)
-			return false, err
-		}
-
-		for _, targetGroupARN := range targetGroupARNs {
-			awsClient.updateNetworkTargetGroupAttribute(targetGroupARN, loadBalancerAttributes)
-		}
+	targetGroupARNs, err := awsClient.getTargetGroupsByLoadBalancer(loadBalancerARN)
+	if err != nil {
+		ulbLogger.Info("Unable to obtain load balancer target groups", "loadBalancerARN", loadBalancerARN)
+		return false, err
+	}
+	for _, targetGroupARN := range targetGroupARNs {
+		awsClient.updateNetworkTargetGroupAttribute(targetGroupARN, loadBalancerAttributes)
 	}
 
 	return true, nil
