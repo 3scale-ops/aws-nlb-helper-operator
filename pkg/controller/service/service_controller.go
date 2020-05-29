@@ -2,7 +2,10 @@ package service
 
 import (
 	"context"
+	"strconv"
 	"strings"
+
+	aws_helper "github.com/aws-nlb-helper-operator/pkg/controller/aws"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -19,14 +22,15 @@ import (
 )
 
 const (
-	helperAnnotationPrefix                               = "aws-nlb-helper.3scale.net"
-	helperAnnotationTargetGroupProxyProcotolKey          = "aws-nlb-helper.3scale.net/enable-targetgroup-proxy-protocol"
-	helperAnnotationTargetGroupSticknessKey              = "aws-nlb-helper.3scale.net/enable-targetgroup-stickness"
-	helperAnnotationTargetGroupDeregistrationKey         = "aws-nlb-helper.3scale.net/targetgroup-deregisration-delay"
-	helperAnnotationLoadBalancerTerminationProtectionKey = "aws-nlb-helper.3scale.net/loadbalanacer-termination-protection"
-	awsLoadBalancerTypeAnnotationKey                     = "service.beta.kubernetes.io/aws-load-balancer-type"
-	awsLoadBalancerTypeNLBAnnotationValue                = "nlb"
-	awsLoadBalancerTypeELBAnnotationValue                = "elb"
+	helperAnnotationPrefix                                 = "aws-nlb-helper.3scale.net"
+	helperAnnotationTargetGroupsProxyProcotolKey           = "aws-nlb-helper.3scale.net/enable-targetgroups-proxy-protocol"
+	helperAnnotationTargetGroupsSticknessKey               = "aws-nlb-helper.3scale.net/enable-targetgroups-stickness"
+	helperAnnotationTargetGroupsDeregistrationDelayKey     = "aws-nlb-helper.3scale.net/targetgroups-deregisration-delay"
+	helperAnnotationTargetGroupsDeregistrationDelayDefault = 300
+	helperAnnotationLoadBalancerTerminationProtectionKey   = "aws-nlb-helper.3scale.net/loadbalanacer-termination-protection"
+	awsLoadBalancerTypeAnnotationKey                       = "service.beta.kubernetes.io/aws-load-balancer-type"
+	awsLoadBalancerTypeNLBAnnotationValue                  = "nlb"
+	awsLoadBalancerTypeELBAnnotationValue                  = "elb"
 )
 
 var log = logf.Log.WithName("controller_service")
@@ -165,7 +169,28 @@ func (r *ReconcileService) Reconcile(request reconcile.Request) (reconcile.Resul
 	awsLoadBalancerIngressHostname := svc.Status.LoadBalancer.Ingress[0].Hostname
 	reqLogger.Info("AWS load balancer type set", "awsLoadBalancerDNS", awsLoadBalancerIngressHostname)
 
-	enableProxyProtocol := svc.GetAnnotations()[helperAnnotationProxyProcotolKey] == "true"
-	enableStickness := svc.GetAnnotations()[helperAnnotationSticknessKey] == "true"
+	if awsLoadBalancerType == "nlb" {
+
+		awsLoadBalancerSettingsDeregistrationDelay, err := strconv.Atoi(svc.GetAnnotations()[helperAnnotationTargetGroupsDeregistrationDelayKey])
+		if err != nil {
+			reqLogger.Info("Unable to parse Deregistration Delay value, defaulting.", "awsLoadBalancerSettingsDeregistrationDelay", helperAnnotationTargetGroupsDeregistrationDelayDefault)
+			awsLoadBalancerSettingsDeregistrationDelay = helperAnnotationTargetGroupsDeregistrationDelayDefault
+		}
+
+		awsLoadBalancerSettings := aws_helper.NetworkLoadBalancerAttributes{
+			LoadBalancerTerminationProtection: (svc.GetAnnotations()[helperAnnotationLoadBalancerTerminationProtectionKey] == "true"),
+			TargetGroupDeregistrationDelay:    awsLoadBalancerSettingsDeregistrationDelay,
+			TargetGroupStickness:              (svc.GetAnnotations()[helperAnnotationTargetGroupsProxyProcotolKey] == "true"),
+			TargetGroupProxyProtocol:          (svc.GetAnnotations()[helperAnnotationTargetGroupsSticknessKey] == "true"),
+		}
+		updated, err := aws_helper.UpdateNetworkLoadBalancer(awsLoadBalancerIngressHostname, serviceNameTagValue, awsLoadBalancerSettings)
+		if err != nil {
+			reqLogger.Error(err, "Unable to update the load balancer", "awsLoadBalancerIngressHostname", awsLoadBalancerIngressHostname)
+		}
+		if updated {
+			reqLogger.Error(err, "Load balancer updated", "awsLoadBalancerIngressHostname", awsLoadBalancerIngressHostname)
+		}
+	}
+
 	return reconcile.Result{}, nil
 }
