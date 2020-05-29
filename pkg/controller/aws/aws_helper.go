@@ -79,3 +79,18 @@ func newAWSClient(id string, secret string, region string) (*AWSClient, error) {
 		rgtapi: resourcegroupstaggingapi.New(sess),
 	}, nil
 }
+
+// generateTagFilters generates a ResourceGroupsTaggingAPI TagFilter object from
+// a tag maps list.
+func generateTagFilters(tags map[string]string) []*resourcegroupstaggingapi.TagFilter {
+	var tagFilters []*resourcegroupstaggingapi.TagFilter
+	for k, v := range tags {
+		tagFilters = append(
+			tagFilters,
+			&resourcegroupstaggingapi.TagFilter{
+				Key:    aws.String(k),
+				Values: []*string{aws.String(v)},
+			})
+	}
+	return tagFilters
+}
