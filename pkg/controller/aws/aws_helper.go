@@ -16,9 +16,11 @@ var log = logf.Log.WithName("helper_aws")
 
 const (
 	awsLoadBalancerResourceTypeFilter            = "elasticloadbalancing"
-	awsApplicationLoadBalancerResourceTypeFilter = "elasticloadbalancing:loadbalancer/app"
-	awsNetworkLoadBalancerResourceTypeFilter     = "elasticloadbalancing:loadbalancer/net"
 	awsTargetGroupResourceTypeFilter             = "elasticloadbalancing:targetgroup"
+	awsApplicationLoadBalancerResourceTypeFilter = "elasticloadbalancing:loadbalancer/app"
+	awsApplicationLoadBalancerStickness          = "lb_cookie"
+	awsNetworkLoadBalancerResourceTypeFilter     = "elasticloadbalancing:loadbalancer/net"
+	awsNetworkLoadBalancerStickness              = "source_ip"
 )
 
 // AWSClient is the struct implementing the lbprovider interface
@@ -79,7 +81,7 @@ func UpdateNetworkLoadBalancer(clusterIDTagKey string, serviceNameTagValue strin
 		}
 
 		for _, targetGroupARN := range targetGroupARNs {
-			ulbLogger.Info("Updating target group", "targetGroupARN", targetGroupARN)
+			awsClient.updateNetworkTargetGroupAttribute(targetGroupARN, loadBalancerAttributes)
 		}
 	}
 
@@ -195,4 +197,40 @@ func (awsc *AWSClient) getTargetGroupsByLoadBalancer(loadBalancerARN string) ([]
 		targetGroupARNs = append(targetGroupARNs, *tg.TargetGroupArn)
 	}
 	return targetGroupARNs, nil
+}
+
+func (awsc *AWSClient) updateNetworkTargetGroupAttribute(targetGroupARN string, loadBalancerAttributes NetworkLoadBalancerAttributes) (bool, error) {
+
+	log.Info("Updating target group", "targetGroupARN", targetGroupARN)
+
+	mtgai := elbv2.ModifyTargetGroupAttributesInput{
+		TargetGroupArn: aws.String(targetGroupARN),
+		Attributes: []*elbv2.TargetGroupAttribute{
+			{
+				Key:   aws.String("stickiness.enabled"),
+				Value: aws.String(strconv.FormatBool(loadBalancerAttributes.TargetGroupStickness)),
+			},
+			{
+				Key:   aws.String("stickiness.type"),
+				Value: aws.String(awsNetworkLoadBalancerStickness),
+			},
+			{
+				Key:   aws.String("proxy_protocol_v2.enabled"),
+				Value: aws.String(strconv.FormatBool(loadBalancerAttributes.TargetGroupProxyProtocol)),
+			},
+			{
+				Key:   aws.String("deregistration_delay.timeout_seconds"),
+				Value: aws.String(strconv.Itoa(loadBalancerAttributes.TargetGroupDeregistrationDelay)),
+			},
+		},
+	}
+
+	mtgao, err := awsc.elbv2.ModifyTargetGroupAttributes(&mtgai)
+	if err != nil {
+		log.Error(err, "Unable to modify the target groups", "TargetGroupARN", targetGroupARN, "ModifyLoadBalancerAttributesOutput", &mtgao)
+		return false, err
+	}
+
+	log.Info("Target groups updated", "TargetGroupARN", targetGroupARN, "ModifyLoadBalancerAttributesOutput", &mtgao)
+	return true, nil
 }
