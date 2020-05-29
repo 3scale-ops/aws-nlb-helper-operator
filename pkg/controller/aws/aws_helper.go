@@ -38,8 +38,8 @@ type NetworkLoadBalancerAttributes struct {
 }
 
 // UpdateNetworkLoadBalancer updates an AWS load balancer
-func UpdateNetworkLoadBalancer(clusterIDTagKey string, serviceNameTagValue string, loadBalancerAttributes NetworkLoadBalancerAttributes) (bool, error) {
-	ulbLogger := log.WithValues("ClusterId", clusterIDTagKey, "ServiceName", serviceNameTagValue)
+func UpdateNetworkLoadBalancer(loadBalancerDNS string, serviceNameTagValue string, loadBalancerAttributes NetworkLoadBalancerAttributes) (bool, error) {
+	ulbLogger := log.WithValues("LoadBalancerDNS", loadBalancerDNS, "ServiceName", serviceNameTagValue)
 
 	// Get AWS Clients for ELBV2 and ResourceGroupsTaggingAPI APIs
 	awsClient, err := newAWSClient(
@@ -58,19 +58,27 @@ func UpdateNetworkLoadBalancer(clusterIDTagKey string, serviceNameTagValue strin
 
 	// Generate resource tags map
 	tags := map[string]string{
-		"kubernetes.io/service-name":                             serviceNameTagValue,
-		fmt.Sprintf("kubernetes.io/cluster/%s", clusterIDTagKey): "owned",
+		"kubernetes.io/service-name": serviceNameTagValue,
+		// https://github.com/3scale/aws-nlb-helper-operator/issues/1
+		// fmt.Sprintf("kubernetes.io/cluster/%s", clusterIDTagKey): "owned",
 	}
 	ulbLogger.Info("Looking for tagged resources", "Tags", tags)
 
 	// Get tagged network load balancers
-	networkLoadBalancerArns, err := awsClient.getNetworkLoadBalancerByTag(tags)
+	filteredLoadBalancers, err := awsClient.getNetworkLoadBalancerByTag(tags)
 	if err != nil {
 		ulbLogger.Error(err, "Unable to obtain load balancers matching the tags", "Tags", tags)
 		return false, err
 	}
 
-	for _, loadBalancerARN := range networkLoadBalancerArns {
+	// Second filtering using DNS name as clusterIDTagKey is not available
+	// https://github.com/3scale/aws-nlb-helper-operator/issues/1
+
+	loadBalancerARN, err := awsClient.getLoadBalancerByDNS(filteredLoadBalancers, loadBalancerDNS)
+	if err != nil {
+		ulbLogger.Error(err, "Unable to obtain load balancers matching the DNS", "Tags", tags)
+		return false, err
+	}
 
 		awsClient.updateNetworkLoadBalancerAttributes(loadBalancerARN, loadBalancerAttributes)
 
