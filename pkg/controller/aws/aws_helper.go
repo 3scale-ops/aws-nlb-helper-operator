@@ -27,16 +27,16 @@ type AWSClient struct {
 	rgtapi *resourcegroupstaggingapi.ResourceGroupsTaggingAPI
 }
 
-// LoadBalancerAttributes struct
-type LoadBalancerAttributes struct {
+// NetworkLoadBalancerAttributes struct
+type NetworkLoadBalancerAttributes struct {
 	LoadBalancerTerminationProtection bool
 	TargetGroupDeregistrationDelay    int
 	TargetGroupStickness              bool
 	TargetGroupProxyProtocol          bool
 }
 
-// UpdateLoadBalancer updates an AWS load balancer
-func UpdateLoadBalancer(clusterIDTagKey string, serviceNameTagValue string, loadBalancerAttributes LoadBalancerAttributes) (bool, error) {
+// UpdateNetworkLoadBalancer updates an AWS load balancer
+func UpdateNetworkLoadBalancer(clusterIDTagKey string, serviceNameTagValue string, loadBalancerAttributes NetworkLoadBalancerAttributes) (bool, error) {
 	ulbLogger := log.WithValues("ClusterId", clusterIDTagKey, "ServiceName", serviceNameTagValue)
 
 	// Get AWS Clients for ELBV2 and ResourceGroupsTaggingAPI APIs
