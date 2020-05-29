@@ -3,6 +3,7 @@ module github.com/aws-nlb-helper-operator
 go 1.13
 
 require (
+	github.com/aws/aws-sdk-go v1.25.48
 	github.com/operator-framework/operator-sdk v0.17.1
 	github.com/spf13/pflag v1.0.5
 	k8s.io/api v0.17.4
