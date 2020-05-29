@@ -72,26 +72,16 @@ func UpdateNetworkLoadBalancer(clusterIDTagKey string, serviceNameTagValue strin
 
 		awsClient.updateNetworkLoadBalancerAttributes(loadBalancerARN, loadBalancerAttributes)
 
-func (awsc *AWSClient) updateNetworkLoadBalancerAttributes(loadBalancerARN string, loadBalancerAttributes NetworkLoadBalancerAttributes) (bool, error) {
+		targetGroupARNs, err := awsClient.getTargetGroupsByLoadBalancer(loadBalancerARN)
+		if err != nil {
+			ulbLogger.Info("Unable to obtain load balancer target groups", "loadBalancerARN", loadBalancerARN)
+			return false, err
+		}
 
-	mlbai := elbv2.ModifyLoadBalancerAttributesInput{
-		LoadBalancerArn: aws.String(loadBalancerARN),
-		Attributes: []*elbv2.LoadBalancerAttribute{
-			{
-				Key:   aws.String("deletion_protection.enabled"),
-				Value: aws.String(strconv.FormatBool(loadBalancerAttributes.LoadBalancerTerminationProtection)),
-			},
-		},
+		for _, targetGroupARN := range targetGroupARNs {
+			ulbLogger.Info("Updating target group", "targetGroupARN", targetGroupARN)
+		}
 	}
-	log.Info("ModifyLoadBalancerAttributesInput", "ModifyLoadBalancerAttributesInput", &mlbai)
-
-	mlbao, err := awsc.elbv2.ModifyLoadBalancerAttributes(&mlbai)
-	if err != nil {
-		log.Error(err, "Unable to Modify the load balancer", "ModifyLoadBalancerAttributesOutput", &mlbao)
-		return false, err
-	}
-
-	log.Info("Load balancer updated", "ModifyLoadBalancerAttributesOutput", &mlbao)
 
 	return true, nil
 }
@@ -186,6 +176,23 @@ func (awsc *AWSClient) updateNetworkLoadBalancerAttributes(loadBalancerARN strin
 	return true, nil
 }
 
-	return true, nil
-}
+// getTargetGroupsByLoadBalancer returns a list of target groups attached to a
+// the load balancer defined by the loadBalancerARN parameter.
+func (awsc *AWSClient) getTargetGroupsByLoadBalancer(loadBalancerARN string) ([]string, error) {
 
+	dlbi := elbv2.DescribeTargetGroupsInput{
+		LoadBalancerArn: aws.String(loadBalancerARN),
+	}
+
+	dtgo, err := awsc.elbv2.DescribeTargetGroups(&dlbi)
+	if err != nil {
+		log.Error(err, "Unable to describe load balancer target groups", "LoadBalancerARN", loadBalancerARN, "DescribeTargetGroupsOutput", &dtgo)
+		return nil, err
+	}
+
+	targetGroupARNs := []string{}
+	for _, tg := range dtgo.TargetGroups {
+		targetGroupARNs = append(targetGroupARNs, *tg.TargetGroupArn)
+	}
+	return targetGroupARNs, nil
+}
