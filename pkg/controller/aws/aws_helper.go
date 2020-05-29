@@ -80,7 +80,8 @@ func UpdateNetworkLoadBalancer(loadBalancerDNS string, serviceNameTagValue strin
 		return false, err
 	}
 
-		awsClient.updateNetworkLoadBalancerAttributes(loadBalancerARN, loadBalancerAttributes)
+	ulbLogger.Info("Load balancer matching tags and DNS found", "LoadBalancerARN", loadBalancerARN, "LoadBalancerDNS", loadBalancerDNS)
+	awsClient.updateNetworkLoadBalancerAttributes(loadBalancerARN, loadBalancerAttributes)
 
 		targetGroupARNs, err := awsClient.getTargetGroupsByLoadBalancer(loadBalancerARN)
 		if err != nil {
