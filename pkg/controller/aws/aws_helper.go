@@ -14,6 +14,13 @@ import (
 
 var log = logf.Log.WithName("helper_aws")
 
+const (
+	awsLoadBalancerResourceTypeFilter            = "elasticloadbalancing"
+	awsApplicationLoadBalancerResourceTypeFilter = "elasticloadbalancing:loadbalancer/app"
+	awsNetworkLoadBalancerResourceTypeFilter     = "elasticloadbalancing:loadbalancer/net"
+	awsTargetGroupResourceTypeFilter             = "elasticloadbalancing:targetgroup"
+)
+
 // AWSClient is the struct implementing the lbprovider interface
 type AWSClient struct {
 	elbv2  *elbv2.ELBV2
