@@ -24,8 +24,8 @@ const (
 	awsNetworkLoadBalancerStickness              = "source_ip"
 )
 
-// AWSClient is the struct implementing the lbprovider interface
-type AWSClient struct {
+// APIClient is the struct implementing the AWS provider interface
+type APIClient struct {
 	elbv2  *elbv2.ELBV2
 	rgtapi *resourcegroupstaggingapi.ResourceGroupsTaggingAPI
 }
@@ -43,7 +43,7 @@ func UpdateNetworkLoadBalancer(loadBalancerDNS string, serviceNameTagValue strin
 	ulbLogger := log.WithValues("LoadBalancerDNS", loadBalancerDNS, "ServiceName", serviceNameTagValue)
 
 	// Get AWS Clients for ELBV2 and ResourceGroupsTaggingAPI APIs
-	awsClient, err := newAWSClient(
+	awsClient, err := newAPIClient(
 		os.Getenv("AWS_ACCESS_KEY_ID"),
 		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		os.Getenv("AWS_REGION"),
@@ -96,8 +96,8 @@ func UpdateNetworkLoadBalancer(loadBalancerDNS string, serviceNameTagValue strin
 	return true, nil
 }
 
-// newAWSClient obtains an AWS session and initiates the needed AWS clients.
-func newAWSClient(id string, secret string, region string) (*AWSClient, error) {
+// newAPIClient obtains an AWS session and initiates the needed AWS clients.
+func newAPIClient(id string, secret string, region string) (*APIClient, error) {
 
 	// Get AWS config
 	awsConfig := &aws.Config{
@@ -113,14 +113,14 @@ func newAWSClient(id string, secret string, region string) (*AWSClient, error) {
 	}
 
 	// Return AWS clients for ELBV2 and ResourceGroupsTaggingAPI
-	return &AWSClient{
+	return &APIClient{
 		elbv2:  elbv2.New(sess),
 		rgtapi: resourcegroupstaggingapi.New(sess),
 	}, nil
 }
 
 // getLoadBalancerByDNS returns the load balancer DNS name
-func (awsc *AWSClient) getLoadBalancerByDNS(loadBalancerARNs []string, loadBalancerDNS string) (string, error) {
+func (awsc *APIClient) getLoadBalancerByDNS(loadBalancerARNs []string, loadBalancerDNS string) (string, error) {
 	dlbi := elbv2.DescribeLoadBalancersInput{}
 	for _, arn := range loadBalancerARNs {
 		dlbi.LoadBalancerArns = append(dlbi.LoadBalancerArns, aws.String(arn))
@@ -159,7 +159,7 @@ func generateTagFilters(tags map[string]string) []*resourcegroupstaggingapi.TagF
 
 // getNetworkLoadBalancerByTag returns a list of network load balancers with
 // the tag list defined by the tags parameter.
-func (awsc *AWSClient) getNetworkLoadBalancerByTag(tags map[string]string) ([]string, error) {
+func (awsc *APIClient) getNetworkLoadBalancerByTag(tags map[string]string) ([]string, error) {
 	return awsc.getResourcesByFilter(
 		generateTagFilters(tags),
 		[]*string{aws.String(awsNetworkLoadBalancerResourceTypeFilter)},
@@ -167,7 +167,7 @@ func (awsc *AWSClient) getNetworkLoadBalancerByTag(tags map[string]string) ([]st
 }
 
 // getResourcesByFilter returns a list of arn of resources matching the filters
-func (awsc *AWSClient) getResourcesByFilter(tagFilters []*resourcegroupstaggingapi.TagFilter, resourceTypeFilters []*string) ([]string, error) {
+func (awsc *APIClient) getResourcesByFilter(tagFilters []*resourcegroupstaggingapi.TagFilter, resourceTypeFilters []*string) ([]string, error) {
 
 	getResourcesInput := &resourcegroupstaggingapi.GetResourcesInput{
 		TagFilters:          tagFilters,
@@ -187,7 +187,7 @@ func (awsc *AWSClient) getResourcesByFilter(tagFilters []*resourcegroupstagginga
 	return loadBalanerARNs, nil
 }
 
-func (awsc *AWSClient) updateNetworkLoadBalancerAttributes(loadBalancerARN string, loadBalancerAttributes NetworkLoadBalancerAttributes) (bool, error) {
+func (awsc *APIClient) updateNetworkLoadBalancerAttributes(loadBalancerARN string, loadBalancerAttributes NetworkLoadBalancerAttributes) (bool, error) {
 
 	mlbai := elbv2.ModifyLoadBalancerAttributesInput{
 		LoadBalancerArn: aws.String(loadBalancerARN),
@@ -211,7 +211,7 @@ func (awsc *AWSClient) updateNetworkLoadBalancerAttributes(loadBalancerARN strin
 
 // getTargetGroupsByLoadBalancer returns a list of target groups attached to a
 // the load balancer defined by the loadBalancerARN parameter.
-func (awsc *AWSClient) getTargetGroupsByLoadBalancer(loadBalancerARN string) ([]string, error) {
+func (awsc *APIClient) getTargetGroupsByLoadBalancer(loadBalancerARN string) ([]string, error) {
 
 	dlbi := elbv2.DescribeTargetGroupsInput{
 		LoadBalancerArn: aws.String(loadBalancerARN),
@@ -230,7 +230,7 @@ func (awsc *AWSClient) getTargetGroupsByLoadBalancer(loadBalancerARN string) ([]
 	return targetGroupARNs, nil
 }
 
-func (awsc *AWSClient) updateNetworkTargetGroupAttribute(targetGroupARN string, loadBalancerAttributes NetworkLoadBalancerAttributes) (bool, error) {
+func (awsc *APIClient) updateNetworkTargetGroupAttribute(targetGroupARN string, loadBalancerAttributes NetworkLoadBalancerAttributes) (bool, error) {
 
 	log.Info("Updating target group", "targetGroupARN", targetGroupARN)
 
