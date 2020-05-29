@@ -70,9 +70,34 @@ func UpdateNetworkLoadBalancer(clusterIDTagKey string, serviceNameTagValue strin
 
 	for _, arn := range networkLoadBalancerArns {
 		ulbLogger.Info("Looking for tagged resources", "arn", arn)
+		awsClient.updateNetworkLoadBalancerAttributes(arn, loadBalancerAttributes)
 	}
 
 	return awsClient != nil, nil
+}
+
+func (awsc *AWSClient) updateNetworkLoadBalancerAttributes(loadBalancerARN string, loadBalancerAttributes NetworkLoadBalancerAttributes) (bool, error) {
+
+	mlbai := elbv2.ModifyLoadBalancerAttributesInput{
+		LoadBalancerArn: aws.String(loadBalancerARN),
+		Attributes: []*elbv2.LoadBalancerAttribute{
+			{
+				Key:   aws.String("deletion_protection.enabled"),
+				Value: aws.String(strconv.FormatBool(loadBalancerAttributes.LoadBalancerTerminationProtection)),
+			},
+		},
+	}
+	log.Info("ModifyLoadBalancerAttributesInput", "ModifyLoadBalancerAttributesInput", &mlbai)
+
+	mlbao, err := awsc.elbv2.ModifyLoadBalancerAttributes(&mlbai)
+	if err != nil {
+		log.Error(err, "Unable to Modify the load balancer", "ModifyLoadBalancerAttributesOutput", &mlbao)
+		return false, err
+	}
+
+	log.Info("Load balancer updated", "ModifyLoadBalancerAttributesOutput", &mlbao)
+
+	return true, nil
 }
 
 // newAWSClient obtains an AWS session and initiates the needed AWS clients.
