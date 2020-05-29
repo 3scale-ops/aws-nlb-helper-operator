@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -19,6 +20,13 @@ type AWSClient struct {
 	rgtapi *resourcegroupstaggingapi.ResourceGroupsTaggingAPI
 }
 
+// LoadBalancerAttributes struct
+type LoadBalancerAttributes struct {
+	LoadBalancerTerminationProtection bool
+	TargetGroupDeregistrationDelay    int
+	TargetGroupStickness              bool
+	TargetGroupProxyProtocol          bool
+}
 // newAWSClient obtains an AWS session and initiates the needed AWS clients.
 func newAWSClient(id string, secret string, region string) (*AWSClient, error) {
 
