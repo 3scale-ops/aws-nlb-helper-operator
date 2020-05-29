@@ -64,17 +64,13 @@ func UpdateNetworkLoadBalancer(clusterIDTagKey string, serviceNameTagValue strin
 	// Get tagged network load balancers
 	networkLoadBalancerArns, err := awsClient.getNetworkLoadBalancerByTag(tags)
 	if err != nil {
-		ulbLogger.Error(err, "Unable to obtain resources matching the tags", "Tags", tags)
+		ulbLogger.Error(err, "Unable to obtain load balancers matching the tags", "Tags", tags)
 		return false, err
 	}
 
-	for _, arn := range networkLoadBalancerArns {
-		ulbLogger.Info("Looking for tagged resources", "arn", arn)
-		awsClient.updateNetworkLoadBalancerAttributes(arn, loadBalancerAttributes)
-	}
+	for _, loadBalancerARN := range networkLoadBalancerArns {
 
-	return awsClient != nil, nil
-}
+		awsClient.updateNetworkLoadBalancerAttributes(loadBalancerARN, loadBalancerAttributes)
 
 func (awsc *AWSClient) updateNetworkLoadBalancerAttributes(loadBalancerARN string, loadBalancerAttributes NetworkLoadBalancerAttributes) (bool, error) {
 
@@ -161,11 +157,11 @@ func (awsc *AWSClient) getResourcesByFilter(tagFilters []*resourcegroupstagginga
 		return nil, err
 	}
 
-	arns := []string{}
+	loadBalanerARNs := []string{}
 	for _, resource := range resources.ResourceTagMappingList {
-		arns = append(arns, *resource.ResourceARN)
+		loadBalanerARNs = append(loadBalanerARNs, *resource.ResourceARN)
 	}
-	return arns, nil
+	return loadBalanerARNs, nil
 }
 
 func (awsc *AWSClient) updateNetworkLoadBalancerAttributes(loadBalancerARN string, loadBalancerAttributes NetworkLoadBalancerAttributes) (bool, error) {
