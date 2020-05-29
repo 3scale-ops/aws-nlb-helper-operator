@@ -102,6 +102,14 @@ func generateTagFilters(tags map[string]string) []*resourcegroupstaggingapi.TagF
 	return tagFilters
 }
 
+// getNetworkLoadBalancerByTag returns a list of network load balancers with
+// the tag list defined by the tags parameter.
+func (awsc *AWSClient) getNetworkLoadBalancerByTag(tags map[string]string) ([]string, error) {
+	return awsc.getResourcesByFilter(
+		generateTagFilters(tags),
+		[]*string{aws.String(awsNetworkLoadBalancerResourceTypeFilter)},
+	)
+}
 
 // getResourcesByFilter returns a list of arn of resources matching the filters
 func (awsc *AWSClient) getResourcesByFilter(tagFilters []*resourcegroupstaggingapi.TagFilter, resourceTypeFilters []*string) ([]string, error) {
