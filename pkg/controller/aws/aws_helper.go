@@ -111,6 +111,29 @@ func newAWSClient(id string, secret string, region string) (*AWSClient, error) {
 	}, nil
 }
 
+// getLoadBalancerByDNS returns the load balancer DNS name
+func (awsc *AWSClient) getLoadBalancerByDNS(loadBalancerARNs []string, loadBalancerDNS string) (string, error) {
+	dlbi := elbv2.DescribeLoadBalancersInput{}
+	for _, arn := range loadBalancerARNs {
+		dlbi.LoadBalancerArns = append(dlbi.LoadBalancerArns, aws.String(arn))
+	}
+
+	dlbo, err := awsc.elbv2.DescribeLoadBalancers(&dlbi)
+	if err != nil {
+		log.Error(err, "Unable to describe load balancer", "LoadBalancerARNs", loadBalancerARNs, "DescribeTargetGroupsOutput", &dlbo)
+		return "", err
+	}
+
+	for _, lb := range dlbo.LoadBalancers {
+		if *lb.DNSName == loadBalancerDNS {
+			return *lb.LoadBalancerArn, nil
+		}
+
+	}
+
+	return "", fmt.Errorf("Load balancer with DNS %s not found", loadBalancerDNS)
+}
+
 // generateTagFilters generates a ResourceGroupsTaggingAPI TagFilter object from
 // a tag maps list.
 func generateTagFilters(tags map[string]string) []*resourcegroupstaggingapi.TagFilter {
