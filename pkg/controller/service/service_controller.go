@@ -19,12 +19,14 @@ import (
 )
 
 const (
-	helperAnnotationPrefix                = "aws-nlb-helper.3scale.net"
-	helperAnnotationProxyProcotolKey      = "aws-nlb-helper.3scale.net/enable-proxy-protocol"
-	helperAnnotationSticknessKey          = "aws-nlb-helper.3scale.net/enable-stickness"
-	awsLoadBalancerTypeAnnotationKey      = "service.beta.kubernetes.io/aws-load-balancer-type"
-	awsLoadBalancerTypeNLBAnnotationValue = "nlb"
-	awsLoadBalancerTypeELBAnnotationValue = "elb"
+	helperAnnotationPrefix                               = "aws-nlb-helper.3scale.net"
+	helperAnnotationTargetGroupProxyProcotolKey          = "aws-nlb-helper.3scale.net/enable-targetgroup-proxy-protocol"
+	helperAnnotationTargetGroupSticknessKey              = "aws-nlb-helper.3scale.net/enable-targetgroup-stickness"
+	helperAnnotationTargetGroupDeregistrationKey         = "aws-nlb-helper.3scale.net/targetgroup-deregisration-delay"
+	helperAnnotationLoadBalancerTerminationProtectionKey = "aws-nlb-helper.3scale.net/loadbalanacer-termination-protection"
+	awsLoadBalancerTypeAnnotationKey                     = "service.beta.kubernetes.io/aws-load-balancer-type"
+	awsLoadBalancerTypeNLBAnnotationValue                = "nlb"
+	awsLoadBalancerTypeELBAnnotationValue                = "elb"
 )
 
 var log = logf.Log.WithName("controller_service")
