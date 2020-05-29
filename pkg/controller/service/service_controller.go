@@ -188,7 +188,7 @@ func (r *ReconcileService) Reconcile(request reconcile.Request) (reconcile.Resul
 			reqLogger.Error(err, "Unable to update the load balancer", "awsLoadBalancerIngressHostname", awsLoadBalancerIngressHostname)
 		}
 		if updated {
-			reqLogger.Error(err, "Load balancer updated", "awsLoadBalancerIngressHostname", awsLoadBalancerIngressHostname)
+			reqLogger.Info("Load balancer updated", "awsLoadBalancerIngressHostname", awsLoadBalancerIngressHostname)
 		}
 	}
 
