@@ -175,15 +175,16 @@ func (awsc *AWSClient) updateNetworkLoadBalancerAttributes(loadBalancerARN strin
 			},
 		},
 	}
-	log.Info("ModifyLoadBalancerAttributesInput", "ModifyLoadBalancerAttributesInput", &mlbai)
 
 	mlbao, err := awsc.elbv2.ModifyLoadBalancerAttributes(&mlbai)
 	if err != nil {
-		log.Error(err, "Unable to Modify the load balancer", "ModifyLoadBalancerAttributesOutput", &mlbao)
+		log.Error(err, "Unable to Modify the load balancer", "LoadBalancerARN", loadBalancerARN, "ModifyLoadBalancerAttributesOutput", &mlbao)
 		return false, err
 	}
 
 	log.Info("Load balancer updated", "ModifyLoadBalancerAttributesOutput", &mlbao)
+	return true, nil
+}
 
 	return true, nil
 }
