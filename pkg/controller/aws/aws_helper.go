@@ -61,6 +61,12 @@ func UpdateNetworkLoadBalancer(clusterIDTagKey string, serviceNameTagValue strin
 	}
 	ulbLogger.Info("Looking for tagged resources", "Tags", tags)
 
+	// Get tagged network load balancers
+	networkLoadBalancerArns, err := awsClient.getNetworkLoadBalancerByTag(tags)
+	if err != nil {
+		ulbLogger.Error(err, "Unable to obtain resources matching the tags", "Tags", tags)
+		return false, err
+	}
 	return awsClient != nil, nil
 }
 
