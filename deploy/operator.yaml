@@ -21,6 +21,8 @@ spec:
           - aws-nlb-helper-operator
           imagePullPolicy: Always
           env:
+            - name: OPERATOR_NAME
+              value: "aws-nlb-helper-operator"
             - name: WATCH_NAMESPACE
               valueFrom:
                 fieldRef:
@@ -29,5 +31,20 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-nlb-helper-iam
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-nlb-helper-iam
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: AWS_REGION
+              valueFrom:
+                secretKeyRef:
+                  name: aws-nlb-helper-iam
+                  key: AWS_REGION
             - name: OPERATOR_NAME
               value: "aws-nlb-helper-operator"
