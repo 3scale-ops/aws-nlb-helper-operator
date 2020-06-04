@@ -3,6 +3,7 @@ workflows:
   release:
     jobs:
       - release:
+          context: quay
           filters:
             tags:
               only: /^v.*/
