@@ -1,8 +1,15 @@
-CURRENT_GIT_TAG := $(shell git describe --tags --abbrev=0)
-RELEASE := $(CURRENT_GIT_TAG)
-DOCKER_IMAGE := quay.io/3scale/aws-nlb-heper-operator
+CURRENT_GIT_TAG ?= $(shell git describe --tags --abbrev=0)
+RELEASE ?= $(CURRENT_GIT_TAG)
+DOCKER_IMAGE ?= quay.io/3scale/aws-nlb-heper-operator
 KUBECTL ?= kubectl
-NAMESPACE := aws-nlb-helper
+NAMESPACE ?= aws-nlb-helper
+
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S), Linux)
+  INPLACE_SED := sed -i
+else ifeq ($(UNAME_S), Darwin)
+  INPLACE_SED := sed -i ""
+endif
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
@@ -23,9 +30,9 @@ operator-create: ## Create/Update Operator objects
 	$(KUBECTL) apply -n $(NAMESPACE) -f deploy/service_account.yaml
 	$(KUBECTL) apply -n $(NAMESPACE) -f deploy/role.yaml
 	$(KUBECTL) apply -n $(NAMESPACE) -f deploy/role_binding.yaml
-	sed -i '' 's@REPLACE_IMAGE@$(DOCKER_IMAGE):$(RELEASE)@g' deploy/operator.yaml
+	$(INPLACE_SED) 's@REPLACE_IMAGE@$(DOCKER_IMAGE):$(RELEASE)@g' deploy/operator.yaml
 	$(KUBECTL) apply -n $(NAMESPACE) -f deploy/operator.yaml
-	sed -i '' 's@$(DOCKER_IMAGE):$(RELEASE)@REPLACE_IMAGE@g' deploy/operator.yaml
+	$(INPLACE_SED) 's@$(DOCKER_IMAGE):$(RELEASE)@REPLACE_IMAGE@g' deploy/operator.yaml
 
 operator-delete: ## Delete Operator objects
 	$(KUBECTL) delete -n $(NAMESPACE) -f deploy/operator.yaml || true
