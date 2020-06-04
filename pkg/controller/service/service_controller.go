@@ -175,8 +175,8 @@ func (r *ReconcileService) Reconcile(request reconcile.Request) (reconcile.Resul
 		awsLoadBalancerSettings := aws_helper.NetworkLoadBalancerAttributes{
 			LoadBalancerTerminationProtection: (svc.GetAnnotations()[helperAnnotationLoadBalancerTerminationProtectionKey] == "true"),
 			TargetGroupDeregistrationDelay:    awsLoadBalancerSettingsDeregistrationDelay,
-			TargetGroupStickness:              (svc.GetAnnotations()[helperAnnotationTargetGroupsProxyProcotolKey] == "true"),
-			TargetGroupProxyProtocol:          (svc.GetAnnotations()[helperAnnotationTargetGroupsSticknessKey] == "true"),
+			TargetGroupStickness:              (svc.GetAnnotations()[helperAnnotationTargetGroupsSticknessKey] == "true"),
+			TargetGroupProxyProtocol:          (svc.GetAnnotations()[helperAnnotationTargetGroupsProxyProcotolKey] == "true"),
 		}
 		updated, err := aws_helper.UpdateNetworkLoadBalancer(awsLoadBalancerIngressHostname, serviceNameTagValue, awsLoadBalancerSettings)
 		if err != nil {
