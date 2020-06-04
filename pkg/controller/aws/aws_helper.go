@@ -1,4 +1,4 @@
-package main
+package aws
 
 import (
 	"fmt"
@@ -16,12 +16,10 @@ import (
 var log = logf.Log.WithName("helper_aws")
 
 const (
-	awsLoadBalancerResourceTypeFilter            = "elasticloadbalancing"
-	awsTargetGroupResourceTypeFilter             = "elasticloadbalancing:targetgroup"
-	awsApplicationLoadBalancerResourceTypeFilter = "elasticloadbalancing:loadbalancer/app"
-	awsApplicationLoadBalancerStickness          = "lb_cookie"
-	awsNetworkLoadBalancerResourceTypeFilter     = "elasticloadbalancing:loadbalancer/net"
-	awsNetworkLoadBalancerStickness              = "source_ip"
+	awsLoadBalancerResourceTypeFilter        = "elasticloadbalancing"
+	awsTargetGroupResourceTypeFilter         = "elasticloadbalancing:targetgroup"
+	awsNetworkLoadBalancerResourceTypeFilter = "elasticloadbalancing:loadbalancer/net"
+	awsNetworkLoadBalancerStickness          = "source_ip"
 )
 
 // APIClient is the struct implementing the AWS provider interface
