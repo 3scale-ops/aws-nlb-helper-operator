@@ -1,8 +1,12 @@
 CURRENT_GIT_TAG ?= $(shell git describe --tags --abbrev=0)
 RELEASE ?= $(CURRENT_GIT_TAG)
-DOCKER_IMAGE ?= quay.io/3scale/aws-nlb-heper-operator
+BUILD_NAME ?= aws-nlb-helper-operator
+BUILD_PATH ?= build/_output/bin
+DOCKER_IMAGE ?= quay.io/3scale/aws-nlb-helper-operator
 KUBECTL ?= kubectl
 NAMESPACE ?= aws-nlb-helper
+
+.PHONY: build
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S), Linux)
@@ -17,8 +21,11 @@ help:
 run-local: ## Run operator locally
 	operator-sdk run --local --watch-namespace=$(NAMESPACE) --enable-delve
 
-operator-image-build: ## Build operator Docker image
-	operator-sdk build $(DOCKER_IMAGE):$(RELEASE)
+build:
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o $(BUILD_PATH)/$(BUILD_NAME) cmd/manager/main.go
+
+operator-image-build: build ## Build operator Docker image
+	docker build . -f build/Dockerfile -t $(DOCKER_IMAGE):$(RELEASE)
 
 operator-image-push: ## Push operator Docker image to remote registry
 	docker push $(DOCKER_IMAGE):$(RELEASE)

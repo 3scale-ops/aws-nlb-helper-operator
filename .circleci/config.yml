@@ -79,12 +79,12 @@ commands:
       - push-image
 jobs:
   build:
-    machine:
-      image: circleci/classic:latest
+    docker:
+      - image: circleci/golang:1.14-buster
     steps:
       - build-operator-image
   release:
-    machine:
-      image: circleci/classic:latest
+    docker:
+      - image: circleci/golang:1.14-buster
     steps:
       - build-push-operator-image
