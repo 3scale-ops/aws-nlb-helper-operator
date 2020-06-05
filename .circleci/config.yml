@@ -83,12 +83,12 @@ jobs:
       - image: circleci/golang:1.14-buster
     steps:
       - setup_remote_docker:
-          docker_layer_caching: true
+          docker_layer_caching: false
       - build-operator-image
   release:
     docker:
       - image: circleci/golang:1.14-buster
     steps:
       - setup_remote_docker:
-          docker_layer_caching: true
+          docker_layer_caching: false
       - build-push-operator-image
