@@ -54,7 +54,7 @@ commands:
       - run:
           name: Docker build
           command: |
-            export RELEASE=${CIRCLE_TAG:-debug}
+            export RELEASE=${CIRCLE_TAG:-master}
             make operator-image-build
   push-image:
     steps:
@@ -62,7 +62,7 @@ commands:
       - run:
           name: Docker push
           command: |
-            export RELEASE=${CIRCLE_TAG:-debug}
+            export RELEASE=${CIRCLE_TAG:-master}
             make operator-image-
   build-operator-image:
     steps:
