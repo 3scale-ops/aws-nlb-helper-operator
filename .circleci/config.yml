@@ -63,7 +63,7 @@ commands:
           name: Docker push
           command: |
             export RELEASE=${CIRCLE_TAG:-master}
-            make operator-image-
+            make operator-image-push
   build-operator-image:
     steps:
       - checkout
