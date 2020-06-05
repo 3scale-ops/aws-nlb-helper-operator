@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 	"strings"
+	"time"
 
 	aws_helper "github.com/3scale/aws-nlb-helper-operator/pkg/controller/aws"
 
@@ -31,6 +32,8 @@ const (
 	awsLoadBalancerTypeAnnotationKey                       = "service.beta.kubernetes.io/aws-load-balancer-type"
 	awsLoadBalancerTypeNLBAnnotationValue                  = "nlb"
 	awsLoadBalancerTypeELBAnnotationValue                  = "elb"
+	loadBalancerNotReadyRetryInterval                      = 30
+	reconcileInterval                                      = 60
 )
 
 var log = logf.Log.WithName("controller_service")
@@ -95,11 +98,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			switch o := e.ObjectNew.(type) {
 			case *corev1.Service:
-				// Ignore updates to resource status in which case metadata.Generation does not change
-				if e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration() {
-					if o.Spec.Type == "LoadBalancer" {
-						return hasHelperAnnotation(e.MetaNew.GetAnnotations())
-					}
+				if o.Spec.Type == "LoadBalancer" {
+					return hasHelperAnnotation(e.MetaNew.GetAnnotations())
 				}
 			}
 			return false
@@ -161,6 +161,11 @@ func (r *ReconcileService) Reconcile(request reconcile.Request) (reconcile.Resul
 	}
 	reqLogger.Info("AWS load balancer type set", "awsLoadBalancerType", awsLoadBalancerType)
 
+	if len(svc.Status.LoadBalancer.Ingress) < 1 {
+		reqLogger.Info("AWS load balancer DNS not ready.", "serviceNameTagValue", serviceNameTagValue, "loadBalancerNotReadyRetryInterval", loadBalancerNotReadyRetryInterval)
+		return reconcile.Result{RequeueAfter: loadBalancerNotReadyRetryInterval * time.Second}, nil
+	}
+
 	awsLoadBalancerIngressHostname := svc.Status.LoadBalancer.Ingress[0].Hostname
 	reqLogger.Info("AWS load balancer type set", "awsLoadBalancerDNS", awsLoadBalancerIngressHostname)
 
@@ -187,5 +192,6 @@ func (r *ReconcileService) Reconcile(request reconcile.Request) (reconcile.Resul
 		}
 	}
 
-	return reconcile.Result{}, nil
+	return reconcile.Result{RequeueAfter: reconcileInterval * time.Second}, nil
+
 }
