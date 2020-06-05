@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"github.com/aws-nlb-helper-operator/pkg/controller/service"
+	"github.com/3scale/aws-nlb-helper-operator/pkg/controller/service"
 )
 
 func init() {

@@ -1,4 +1,4 @@
-module github.com/aws-nlb-helper-operator
+module github.com/3scale/aws-nlb-helper-operator
 
 go 1.13
 
