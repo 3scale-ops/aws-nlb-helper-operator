@@ -36,8 +36,9 @@ operator-image-push: ## Push operator Docker image to remote registry
 
 operator-image-update: operator-image-build operator-image-push ## Build and Push Operator Docker image to remote registry
 
-operator-create: ## Create/Update Operator objects
+operator-deploy: ## Create/Update Operator objects
 	$(KUBECTL) create namespace $(NAMESPACE) || true
+	$(KUBECTL) apply -n $(NAMESPACE) -f deploy/aws_iam.yaml
 	$(KUBECTL) apply -n $(NAMESPACE) -f deploy/service_account.yaml
 	$(KUBECTL) apply -n $(NAMESPACE) -f deploy/role.yaml
 	$(KUBECTL) apply -n $(NAMESPACE) -f deploy/role_binding.yaml
@@ -50,4 +51,5 @@ operator-delete: ## Delete Operator objects
 	$(KUBECTL) delete -n $(NAMESPACE) -f deploy/role_binding.yaml || true
 	$(KUBECTL) delete -n $(NAMESPACE) -f deploy/role.yaml || true
 	$(KUBECTL) delete -n $(NAMESPACE) -f deploy/service_account.yaml || true
+	$(KUBECTL) delete -n $(NAMESPACE) -f deploy/aws_iam.yaml || true
 	$(KUBECTL) delete ns $(NAMESPACE) || true

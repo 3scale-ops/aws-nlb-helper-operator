@@ -1,0 +1,9 @@
+kind: Secret
+apiVersion: v1
+metadata:
+  name: aws-nlb-helper-iam
+type: Opaque
+data:
+  AWS_ACCESS_KEY_ID: __AWS_ACCESS_KEY_ID__
+  AWS_REGION: __AWS_REGION__
+  AWS_SECRET_ACCESS_KEY: __AWS_SECRET_ACCESS_KEY__
