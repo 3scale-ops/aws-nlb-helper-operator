@@ -2,6 +2,7 @@ CURRENT_GIT_TAG ?= $(shell git describe --tags --abbrev=0)
 RELEASE ?= $(CURRENT_GIT_TAG)
 BUILD_NAME ?= aws-nlb-helper-operator
 BUILD_PATH ?= build/_output/bin
+GO_COVERAGE ?= ./coverage.txt
 DOCKER_IMAGE ?= quay.io/3scale/aws-nlb-helper-operator
 KUBECTL ?= kubectl
 NAMESPACE ?= aws-nlb-helper
@@ -21,8 +22,11 @@ help:
 run-local: ## Run operator locally
 	operator-sdk run --local --watch-namespace=$(NAMESPACE) --enable-delve
 
-build:
+build: ## Run build
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o $(BUILD_PATH)/$(BUILD_NAME) cmd/manager/main.go
+
+test: ## Run tests
+	go test ./... -race -coverprofile=$(GO_COVERAGE) -covermode=atomic
 
 operator-image-build: build ## Build operator Docker image
 	docker build . -f build/Dockerfile -t $(DOCKER_IMAGE):$(RELEASE)
