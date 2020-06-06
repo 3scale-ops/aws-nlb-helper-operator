@@ -22,7 +22,7 @@ some extra annotations to the kubernetes service objects.
 
 | Setting                              | Annotations                                                    | Values      | Default |
 | ------------------------------------ | -------------------------------------------------------------- | ----------- | ------- |
-| Load Balancer Termination Protection | `aws-nlb-helper.3scale.net/loadbalanacer-termination-protection` | `true, `false` | `false`   |
+| Load Balancer Termination Protection | `aws-nlb-helper.3scale.net/loadbalanacer-termination-protection` | `true`, `false` | `false`   |
 | Target Group Proxy Protocol          | `aws-nlb-helper.3scale.net/enable-targetgroups-proxy-protocol`   | `true`, `false` | `false`   |
 | Target Group Stickness               | `aws-nlb-helper.3scale.net/enable-targetgroups-stickness`        | `true`, `false` | `false`   |
 | Target Group Deregistration Delay    | `aws-nlb-helper.3scale.net/targetgroups-deregisration-delay`     | `0-3600`      | `300`     |
