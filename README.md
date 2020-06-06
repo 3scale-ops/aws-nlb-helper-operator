@@ -20,12 +20,12 @@ some extra annotations to the kubernetes service objects.
 
 ## Annotations
 
-| Setting                              | Annotations                                                    | Values      | Default |
-| ------------------------------------ | -------------------------------------------------------------- | ----------- | ------- |
-| Load Balancer Termination Protection | `aws-nlb-helper.3scale.net/loadbalanacer-termination-protection` | `true`, `false` | `false`   |
-| Target Group Proxy Protocol          | `aws-nlb-helper.3scale.net/enable-targetgroups-proxy-protocol`   | `true`, `false` | `false`   |
-| Target Group Stickness               | `aws-nlb-helper.3scale.net/enable-targetgroups-stickness`        | `true`, `false` | `false`   |
-| Target Group Deregistration Delay    | `aws-nlb-helper.3scale.net/targetgroups-deregisration-delay`     | `0-3600`      | `300`     |
+| Setting                              | Annotations                                                      | Values          | Default |
+| ------------------------------------ | ---------------------------------------------------------------- | --------------- | ------- |
+| Load Balancer Termination Protection | `aws-nlb-helper.3scale.net/loadbalanacer-termination-protection` | `true`, `false` | `false` |
+| Target Group Proxy Protocol          | `aws-nlb-helper.3scale.net/enable-targetgroups-proxy-protocol`   | `true`, `false` | `false` |
+| Target Group Stickness               | `aws-nlb-helper.3scale.net/enable-targetgroups-stickness`        | `true`, `false` | `false` |
+| Target Group Deregistration Delay    | `aws-nlb-helper.3scale.net/targetgroups-deregisration-delay`     | `0-3600`        | `300`   |
 
 ## Requirements
 
@@ -138,6 +138,9 @@ metadata:
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
     aws-nlb-helper.3scale.net/enable-targetgroups-proxy-protocol: "true"
+    aws-nlb-helper.3scale.net/enable-targetgroups-stickness: "true"
+    aws-nlb-helper.3scale.net/loadbalanacer-termination-protection: "true"
+    aws-nlb-helper.3scale.net/targetgroups-deregisration-delay: "450"
 spec:
   type: LoadBalancer
   selector:
