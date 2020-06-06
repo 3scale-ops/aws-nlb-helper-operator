@@ -74,7 +74,7 @@ data "aws_iam_policy_document" "this" {
 }
 
 resource "aws_iam_user_policy" "this" {
-  name   = "${local.workload}-user-policy"
+  name   = "aws-nlb-helper-user-policy"
   user   = aws_iam_user.this.name
   policy = data.aws_iam_policy_document.this.json
 }
@@ -151,7 +151,7 @@ spec:
 
 ### Controller logs
 
-When the service is created, the `externalName` is not yet available (the load balancer is being provisioned), so it try it again retry after some time.
+When the service is created, the `externalName` is not yet available (the load balancer is being provisioned), so it try to read the DNS until is available.
 
 ```log
 {"level":"info","ts":1591461948.7908804,"logger":"controller_service","msg":"Matching annotations found","AnnotationPrefix":"aws-nlb-helper.3scale.net","AnnotationKey":"aws-nlb-helper.3scale.net/enable-targetgroups-proxy-protocol","AnnotationValue":"true"}
