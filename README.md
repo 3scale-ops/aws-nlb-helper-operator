@@ -221,10 +221,10 @@ If a service is added or updated, will run again. A part for those kind of event
 
 You can contribute by:
 
-* Raising any issues you find using operator
+* Raising any issues you find using the operator
 * Fixing issues by opening [Pull Requests](https://github.com/3scale/aws-nlb-helper-operator/pulls)
 * Submitting a patch or opening a PR
 * Improving documentation
-* Talking about operator
+* Talking about the operator
 
 All bugs, tasks or enhancements are tracked as [GitHub issues](https://github.com/3scale/aws-nlb-helper-operator/issues).
