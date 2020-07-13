@@ -23,17 +23,20 @@ import (
 )
 
 const (
-	helperAnnotationPrefix                                 = "aws-nlb-helper.3scale.net"
-	helperAnnotationTargetGroupsProxyProcotolKey           = "aws-nlb-helper.3scale.net/enable-targetgroups-proxy-protocol"
-	helperAnnotationTargetGroupsSticknessKey               = "aws-nlb-helper.3scale.net/enable-targetgroups-stickness"
-	helperAnnotationTargetGroupsDeregistrationDelayKey     = "aws-nlb-helper.3scale.net/targetgroups-deregisration-delay"
-	helperAnnotationTargetGroupsDeregistrationDelayDefault = 300
-	helperAnnotationLoadBalancerTerminationProtectionKey   = "aws-nlb-helper.3scale.net/loadbalanacer-termination-protection"
-	awsLoadBalancerTypeAnnotationKey                       = "service.beta.kubernetes.io/aws-load-balancer-type"
-	awsLoadBalancerTypeNLBAnnotationValue                  = "nlb"
-	awsLoadBalancerTypeELBAnnotationValue                  = "elb"
-	loadBalancerNotReadyRetryInterval                      = 30
-	reconcileInterval                                      = 60
+	helperAnnotationPrefix                                   = "aws-nlb-helper.3scale.net"
+	helperAnnotationLoadBalancerTerminationProtectionKey     = "aws-nlb-helper.3scale.net/loadbalanacer-termination-protection"
+	helperAnnotationLoadBalancerTerminationProtectionDefault = false
+	helperAnnotationTargetGroupsProxyProcotolKey             = "aws-nlb-helper.3scale.net/enable-targetgroups-proxy-protocol"
+	helperAnnotationTargetGroupsProxyProcotolDefault         = false
+	helperAnnotationTargetGroupsSticknessKey                 = "aws-nlb-helper.3scale.net/enable-targetgroups-stickness"
+	helperAnnotationTargetGroupsSticknessDefault             = false
+	helperAnnotationTargetGroupsDeregistrationDelayKey       = "aws-nlb-helper.3scale.net/targetgroups-deregisration-delay"
+	helperAnnotationTargetGroupsDeregistrationDelayDefault   = 300
+	awsLoadBalancerTypeAnnotationKey                         = "service.beta.kubernetes.io/aws-load-balancer-type"
+	awsLoadBalancerTypeNLBAnnotationValue                    = "nlb"
+	awsLoadBalancerTypeELBAnnotationValue                    = "elb"
+	loadBalancerNotReadyRetryInterval                        = 30
+	reconcileInterval                                        = 60
 )
 
 var log = logf.Log.WithName("controller_service")
@@ -171,17 +174,35 @@ func (r *ReconcileService) Reconcile(request reconcile.Request) (reconcile.Resul
 
 	if awsLoadBalancerType == "nlb" {
 
+		awsLoadBalancerSettingsTerminationProtection, err := strconv.ParseBool(svc.GetAnnotations()[helperAnnotationLoadBalancerTerminationProtectionKey])
+		if err != nil {
+			reqLogger.Info("Unable to parse Termination Protection value, defaulting.", "awsLoadBalancerSettingsTerminationProtection", helperAnnotationLoadBalancerTerminationProtectionDefault)
+			awsLoadBalancerSettingsTerminationProtection = helperAnnotationLoadBalancerTerminationProtectionDefault
+		}
+
 		awsLoadBalancerSettingsDeregistrationDelay, err := strconv.Atoi(svc.GetAnnotations()[helperAnnotationTargetGroupsDeregistrationDelayKey])
 		if err != nil {
 			reqLogger.Info("Unable to parse Deregistration Delay value, defaulting.", "awsLoadBalancerSettingsDeregistrationDelay", helperAnnotationTargetGroupsDeregistrationDelayDefault)
 			awsLoadBalancerSettingsDeregistrationDelay = helperAnnotationTargetGroupsDeregistrationDelayDefault
 		}
 
+		awsLoadBalancerSettingsTargetGroupProxyProtocol, err := strconv.ParseBool(svc.GetAnnotations()[helperAnnotationTargetGroupsProxyProcotolKey])
+		if err != nil {
+			reqLogger.Info("Unable to parse Target Group Proxy Protocol value, defaulting.", "awsLoadBalancerSettingsTargetGroupProxyProtocol", helperAnnotationTargetGroupsProxyProcotolDefault)
+			awsLoadBalancerSettingsTargetGroupProxyProtocol = helperAnnotationTargetGroupsProxyProcotolDefault
+		}
+
+		awsLoadBalancerSettingsTargetGroupStickness, err := strconv.ParseBool(svc.GetAnnotations()[helperAnnotationTargetGroupsSticknessKey])
+		if err != nil {
+			reqLogger.Info("Unable to parse Target Group Sticknesss value, defaulting.", "awsLoadBalancerSettingsTargetGroupStickness", helperAnnotationTargetGroupsSticknessDefault)
+			awsLoadBalancerSettingsTargetGroupStickness = helperAnnotationTargetGroupsSticknessDefault
+		}
+
 		awsLoadBalancerSettings := aws_helper.NetworkLoadBalancerAttributes{
-			LoadBalancerTerminationProtection: (svc.GetAnnotations()[helperAnnotationLoadBalancerTerminationProtectionKey] == "true"),
+			LoadBalancerTerminationProtection: awsLoadBalancerSettingsTerminationProtection,
 			TargetGroupDeregistrationDelay:    awsLoadBalancerSettingsDeregistrationDelay,
-			TargetGroupStickness:              (svc.GetAnnotations()[helperAnnotationTargetGroupsSticknessKey] == "true"),
-			TargetGroupProxyProtocol:          (svc.GetAnnotations()[helperAnnotationTargetGroupsProxyProcotolKey] == "true"),
+			TargetGroupStickness:              awsLoadBalancerSettingsTargetGroupStickness,
+			TargetGroupProxyProtocol:          awsLoadBalancerSettingsTargetGroupProxyProtocol,
 		}
 		updated, err := aws_helper.UpdateNetworkLoadBalancer(awsLoadBalancerIngressHostname, serviceNameTagValue, awsLoadBalancerSettings)
 		if err != nil {
