@@ -98,17 +98,21 @@ func UpdateNetworkLoadBalancer(loadBalancerDNS string, serviceNameTagValue strin
 func newAPIClient(id string, secret string, region string) (*APIClient, error) {
 
 	// Get AWS config
-	awsConfig := &aws.Config{
-		Region:      aws.String(region),
-		Credentials: credentials.NewStaticCredentials(id, secret, ""),
+	awsConfig := &aws.Config{}
+	if ( id == "" || secret == "" ) {
+		awsConfig = &aws.Config{
+			Region:      aws.String(region),
+		}
+	} else {
+		awsConfig = &aws.Config{
+			Region:      aws.String(region),
+			Credentials: credentials.NewStaticCredentials(id, secret, ""),
+		}
 	}
 
 	// Initialize an AWS session
 	awsConfig = awsConfig.WithCredentialsChainVerboseErrors(true)
-	sess, err := session.NewSession(awsConfig)
-	if err != nil {
-		return nil, fmt.Errorf("Unable to initialize AWS session: %v", err)
-	}
+	sess := session.Must(session.NewSession(awsConfig))
 
 	// Return AWS clients for ELBV2 and ResourceGroupsTaggingAPI
 	return &APIClient{
