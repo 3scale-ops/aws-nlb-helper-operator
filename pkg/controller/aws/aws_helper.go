@@ -16,6 +16,7 @@ import (
 var log = logf.Log.WithName("helper_aws")
 
 const (
+	awsDefaultRegion                         = "us-east-1"
 	awsLoadBalancerResourceTypeFilter        = "elasticloadbalancing"
 	awsTargetGroupResourceTypeFilter         = "elasticloadbalancing:targetgroup"
 	awsNetworkLoadBalancerResourceTypeFilter = "elasticloadbalancing:loadbalancer/net"
@@ -41,17 +42,10 @@ func UpdateNetworkLoadBalancer(loadBalancerDNS string, serviceNameTagValue strin
 	ulbLogger := log.WithValues("LoadBalancerDNS", loadBalancerDNS, "ServiceName", serviceNameTagValue)
 
 	// Get AWS Clients for ELBV2 and ResourceGroupsTaggingAPI APIs
-	awsClient, err := newAPIClient(
-		os.Getenv("AWS_ACCESS_KEY_ID"),
-		os.Getenv("AWS_SECRET_ACCESS_KEY"),
-		os.Getenv("AWS_REGION"),
-	)
+	awsClient, err := newAPIClient()
 
 	if err != nil {
-		ulbLogger.Error(err, "Unable to create AWS Client",
-			"AWS_ACCESS_KEY_ID", os.Getenv("AWS_ACCESS_KEY_ID"),
-			"AWS_REGION", os.Getenv("AWS_REGION"),
-		)
+		ulbLogger.Error(err, "Unable to initialize an AWS Client")
 		return false, err
 	}
 
@@ -94,18 +88,38 @@ func UpdateNetworkLoadBalancer(loadBalancerDNS string, serviceNameTagValue strin
 	return true, nil
 }
 
-// newAPIClient obtains an AWS session and initiates the needed AWS clients.
-func newAPIClient(id string, secret string, region string) (*APIClient, error) {
+// newAWSConfig generates an AWS config.
+func newAWSConfig() *aws.Config {
 
-	// Get AWS config
-	awsConfig := &aws.Config{
-		Region:      aws.String(region),
-		Credentials: credentials.NewStaticCredentials(id, secret, ""),
+	awsRegion := os.Getenv("AWS_REGION")
+
+	if awsRegion == "" {
+		awsRegion = awsDefaultRegion
+		log.Info("Empty AWS_REGION, using default value", "awsRegion", awsRegion)
 	}
 
+	if (os.Getenv("AWS_ACCESS_KEY_ID") != "") && (os.Getenv("AWS_SECRET_ACCESS_KEY") != "") {
+		log.Info("Configuring AWS client using the environment credentials", "AWS_ACCESS_KEY_ID", os.Getenv("AWS_ACCESS_KEY_ID"))
+		return &aws.Config{
+			Region: aws.String(awsRegion),
+			Credentials: credentials.NewStaticCredentials(
+				os.Getenv("AWS_ACCESS_KEY_ID"),
+				os.Getenv("AWS_SECRET_ACCESS_KEY"),
+				"",
+			),
+		}
+	}
+
+	log.Info("Configuring AWS client using the service account")
+	return &aws.Config{Region: aws.String(awsRegion)}
+
+}
+
+// newAPIClient obtains an AWS session and initiates the needed AWS clients.
+func newAPIClient() (*APIClient, error) {
+
 	// Initialize an AWS session
-	awsConfig = awsConfig.WithCredentialsChainVerboseErrors(true)
-	sess, err := session.NewSession(awsConfig)
+	sess, err := session.NewSession(newAWSConfig())
 	if err != nil {
 		return nil, fmt.Errorf("Unable to initialize AWS session: %v", err)
 	}
