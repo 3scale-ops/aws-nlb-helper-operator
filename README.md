@@ -27,9 +27,18 @@ some extra annotations to the kubernetes service objects.
 | Target Group Stickness               | `aws-nlb-helper.3scale.net/enable-targetgroups-stickness`        | `true`, `false` | `false` |
 | Target Group Deregistration Delay    | `aws-nlb-helper.3scale.net/targetgroups-deregisration-delay`     | `0-3600`        | `300`   |
 
+## AWS authentication
+
+By default, the operator will use the role provided by the service acccount to
+connect to the AWS API. The YAMLs for deploying using [IAM roles for service accounts](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) are available at [deploy/iam-service-accocunt](deploy/iam-service-accocunt).
+
+Otherwise, if the environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are set,
+the operator will use them to interact with the AWS API. You can find the YAMLs
+for deploying the resources using the environment access keys at [deploy/iam-env-credentials](deploy/iam-env-credentials).
+
 ## Requirements
 
-### Secret with IAM credentials
+### Secret with IAM credentials (when using env based credentials)
 
 ```yaml
 kind: Secret
