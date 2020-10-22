@@ -2,6 +2,7 @@ CURRENT_GIT_TAG ?= $(shell git describe --tags --abbrev=0)
 RELEASE ?= $(CURRENT_GIT_TAG)
 BUILD_NAME ?= aws-nlb-helper-operator
 BUILD_PATH ?= build/_output/bin
+DEPLOY_PATH ?= deploy/iam-env-credentials
 GO_COVERAGE ?= ./coverage.txt
 DOCKER_IMAGE ?= quay.io/3scale/aws-nlb-helper-operator
 KUBECTL ?= kubectl
@@ -38,18 +39,18 @@ operator-image-update: operator-image-build operator-image-push ## Build and Pus
 
 operator-deploy: ## Create/Update Operator objects
 	$(KUBECTL) create namespace $(NAMESPACE) || true
-	$(KUBECTL) apply -n $(NAMESPACE) -f deploy/aws_iam.yaml
-	$(KUBECTL) apply -n $(NAMESPACE) -f deploy/service_account.yaml
-	$(KUBECTL) apply -n $(NAMESPACE) -f deploy/role.yaml
-	$(KUBECTL) apply -n $(NAMESPACE) -f deploy/role_binding.yaml
-	$(INPLACE_SED) 's@REPLACE_IMAGE@$(DOCKER_IMAGE):$(RELEASE)@g' deploy/operator.yaml
-	$(KUBECTL) apply -n $(NAMESPACE) -f deploy/operator.yaml
-	$(INPLACE_SED) 's@$(DOCKER_IMAGE):$(RELEASE)@REPLACE_IMAGE@g' deploy/operator.yaml
+	$(KUBECTL) apply -n $(NAMESPACE) -f $(DEPLOY_PATH)/aws_iam.yaml
+	$(KUBECTL) apply -n $(NAMESPACE) -f $(DEPLOY_PATH)/service_account.yaml
+	$(KUBECTL) apply -n $(NAMESPACE) -f $(DEPLOY_PATH)/role.yaml
+	$(KUBECTL) apply -n $(NAMESPACE) -f $(DEPLOY_PATH)/role_binding.yaml
+	$(INPLACE_SED) 's@REPLACE_IMAGE@$(DOCKER_IMAGE):$(RELEASE)@g' $(DEPLOY_PATH)/operator.yaml
+	$(KUBECTL) apply -n $(NAMESPACE) -f $(DEPLOY_PATH)/operator.yaml
+	$(INPLACE_SED) 's@$(DOCKER_IMAGE):$(RELEASE)@REPLACE_IMAGE@g' $(DEPLOY_PATH)/operator.yaml
 
 operator-delete: ## Delete Operator objects
-	$(KUBECTL) delete -n $(NAMESPACE) -f deploy/operator.yaml || true
-	$(KUBECTL) delete -n $(NAMESPACE) -f deploy/role_binding.yaml || true
-	$(KUBECTL) delete -n $(NAMESPACE) -f deploy/role.yaml || true
-	$(KUBECTL) delete -n $(NAMESPACE) -f deploy/service_account.yaml || true
-	$(KUBECTL) delete -n $(NAMESPACE) -f deploy/aws_iam.yaml || true
+	$(KUBECTL) delete -n $(NAMESPACE) -f $(DEPLOY_PATH)/operator.yaml || true
+	$(KUBECTL) delete -n $(NAMESPACE) -f $(DEPLOY_PATH)/role_binding.yaml || true
+	$(KUBECTL) delete -n $(NAMESPACE) -f $(DEPLOY_PATH)/role.yaml || true
+	$(KUBECTL) delete -n $(NAMESPACE) -f $(DEPLOY_PATH)/service_account.yaml || true
+	$(KUBECTL) delete -n $(NAMESPACE) -f $(DEPLOY_PATH)/aws_iam.yaml || true
 	$(KUBECTL) delete ns $(NAMESPACE) || true
