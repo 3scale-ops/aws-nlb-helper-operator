@@ -31,11 +31,9 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
-            - name: AWS_REGION
-              valueFrom:
-                secretKeyRef:
-                  name: aws-nlb-helper-iam
-                  key: AWS_REGION
+# If AWS_REGION is not defined, the default region is "us-east-1"
+#            - name: AWS_REGION
+#              value: "eu-west-1"
           resources:
             limits:
               cpu: 150m
