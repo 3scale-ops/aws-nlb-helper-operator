@@ -30,7 +30,7 @@ some extra annotations to the kubernetes service objects.
 ## AWS authentication
 
 By default, the operator will use the role provided by the service acccount to
-connect to the AWS API. The YAMLs for deploying using [IAM roles for service accounts](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) are available at [deploy/iam-service-accocunt](deploy/iam-service-accocunt).
+connect to the AWS API. The YAMLs for deploying using [IAM roles for service accounts](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) are available at [deploy/iam-service-account](deploy/iam-service-account).
 
 Otherwise, if the environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are set,
 the operator will use them to interact with the AWS API. You can find the YAMLs
