@@ -1,9 +1,6 @@
-name: push
+name: release
 
 on:
-  push:
-    branches:
-    - master
 
   release:
     types:
@@ -11,11 +8,10 @@ on:
 
 jobs:
 
-  push:
+  release:
     env:
       image: aws-nlb-helper-operator
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/master' && github.event_name == 'push' }}
     steps:
     - uses: actions/checkout@v2
 
@@ -27,6 +23,10 @@ jobs:
     - name: Run build
       run: |
         make build
+
+    - name: Run build
+      run: |
+        make test
 
     - name: Get image tag
       id: image_tag
