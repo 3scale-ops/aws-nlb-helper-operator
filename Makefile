@@ -4,9 +4,11 @@ BUILD_NAME ?= aws-nlb-helper-operator
 BUILD_PATH ?= build/_output/bin
 DEPLOY_PATH ?= deploy/iam-env-credentials
 GO_COVERAGE ?= ./coverage.txt
-DOCKER_IMAGE ?= quay.io/3scale/aws-nlb-helper-operator
+CONTAINER_IMAGE ?= quay.io/3scale/aws-nlb-helper-operator
 KUBECTL ?= kubectl
 NAMESPACE ?= aws-nlb-helper
+
+CONTAINER_ENGINE ?= $(which docker)
 
 .PHONY: build
 
@@ -30,10 +32,10 @@ test: ## Run tests
 	go test ./... -race -coverprofile=$(GO_COVERAGE) -covermode=atomic
 
 operator-image-build: build ## Build operator Docker image
-	docker build . -f build/Dockerfile -t $(DOCKER_IMAGE):$(RELEASE)
+	${CONTAINER_ENGINE} build . -f build/Dockerfile -t $(CONTAINER_IMAGE):$(RELEASE)
 
 operator-image-push: ## Push operator Docker image to remote registry
-	docker push $(DOCKER_IMAGE):$(RELEASE)
+	${CONTAINER_ENGINE} push $(CONTAINER_IMAGE):$(RELEASE)
 
 operator-image-update: operator-image-build operator-image-push ## Build and Push Operator Docker image to remote registry
 
@@ -43,9 +45,9 @@ operator-deploy: ## Create/Update Operator objects
 	$(KUBECTL) apply -n $(NAMESPACE) -f $(DEPLOY_PATH)/service_account.yaml
 	$(KUBECTL) apply -n $(NAMESPACE) -f $(DEPLOY_PATH)/role.yaml
 	$(KUBECTL) apply -n $(NAMESPACE) -f $(DEPLOY_PATH)/role_binding.yaml
-	$(INPLACE_SED) 's@REPLACE_IMAGE@$(DOCKER_IMAGE):$(RELEASE)@g' $(DEPLOY_PATH)/operator.yaml
+	$(INPLACE_SED) 's@REPLACE_IMAGE@$(CONTAINER_IMAGE):$(RELEASE)@g' $(DEPLOY_PATH)/operator.yaml
 	$(KUBECTL) apply -n $(NAMESPACE) -f $(DEPLOY_PATH)/operator.yaml
-	$(INPLACE_SED) 's@$(DOCKER_IMAGE):$(RELEASE)@REPLACE_IMAGE@g' $(DEPLOY_PATH)/operator.yaml
+	$(INPLACE_SED) 's@$(CONTAINER_IMAGE):$(RELEASE)@REPLACE_IMAGE@g' $(DEPLOY_PATH)/operator.yaml
 
 operator-delete: ## Delete Operator objects
 	$(KUBECTL) delete -n $(NAMESPACE) -f $(DEPLOY_PATH)/operator.yaml || true
