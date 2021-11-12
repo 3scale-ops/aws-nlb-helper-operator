@@ -1,5 +1,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/3scale/aws-nlb-helper-operator)](https://goreportcard.com/report/github.com/3scale/aws-nlb-helper-operator)
-[![build status](https://circleci.com/gh/3scale/aws-nlb-helper-operator.svg?style=shield)](https://codecov.io/gh/3scale/aws-nlb-helper-operator/.circleci/config.yml)
+[![build](https://github.com/3scale-ops/aws-nlb-helper-operator/workflows/build/badge.svg)](https://github.com/3scale-ops/aws-nlb-helper-operator/actions?query=workflow%3Abuild)
+[![latest](https://github.com/3scale-ops/aws-nlb-helper-operator/workflows/latest/badge.svg)](https://github.com/3scale-ops/aws-nlb-helper-operator/actions?query=workflow%3Alatest)
+[![release](https://github.com/3scale-ops/aws-nlb-helper-operator/workflows/release/badge.svg)](https://github.com/3scale-ops/aws-nlb-helper-operator/actions?query=workflow%3Arelease)
 [![release](https://badgen.net/github/release/3scale/aws-nlb-helper-operator)](https://github.com/3scale/aws-nlb-helper-operator/releases)
 [![license](https://badgen.net/github/license/3scale/aws-nlb-helper-operator)](https://github.com/3scale/aws-nlb-helper-operator/blob/master/LICENSE)
 
