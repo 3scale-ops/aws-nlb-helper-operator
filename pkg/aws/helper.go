@@ -39,14 +39,19 @@ type NetworkLoadBalancerAttributes struct {
 }
 
 // UpdateNetworkLoadBalancer updates an AWS load balancer
-func UpdateNetworkLoadBalancer(loadBalancerDNS string, serviceNameTagValue string, loadBalancerAttributes NetworkLoadBalancerAttributes) (bool, error) {
-	ulbLogger := log.WithValues("LoadBalancerDNS", loadBalancerDNS, "ServiceName", serviceNameTagValue)
+func UpdateNetworkLoadBalancer(
+	nlbDNS string,
+	serviceNameTagValue string,
+	nlbAttributes NetworkLoadBalancerAttributes) (bool, error) {
+
+	ulbLog := log.WithValues(
+		"LoadBalancerDNS", nlbDNS, "ServiceName", serviceNameTagValue,
+	)
 
 	// Get AWS Clients for ELBV2 and ResourceGroupsTaggingAPI APIs
 	awsClient, err := newAPIClient()
-
 	if err != nil {
-		ulbLogger.Error(err, "Unable to initialize an AWS Client")
+		ulbLog.Error(err, "unable to initialize an AWS Client")
 		return false, err
 	}
 
@@ -56,34 +61,47 @@ func UpdateNetworkLoadBalancer(loadBalancerDNS string, serviceNameTagValue strin
 		// https://github.com/3scale/aws-nlb-helper-operator/issues/1
 		// fmt.Sprintf("kubernetes.io/cluster/%s", clusterIDTagKey): "owned",
 	}
-	ulbLogger.Info("Looking for tagged resources", "Tags", tags)
+	ulbLog.V(-2).Info("Looking for tagged resources", "Tags", tags)
 
 	// Get tagged network load balancers
 	filteredLoadBalancers, err := awsClient.getNetworkLoadBalancerByTag(tags)
 	if err != nil {
-		ulbLogger.Error(err, "Unable to obtain load balancers matching the tags", "Tags", tags)
+		ulbLog.Error(
+			err, "unable to obtain load balancers matching the tags",
+			"Tags", tags,
+		)
 		return false, err
 	}
 
 	// Second filtering using DNS name as clusterIDTagKey is not available
 	// https://github.com/3scale/aws-nlb-helper-operator/issues/1
 
-	loadBalancerARN, err := awsClient.getLoadBalancerByDNS(filteredLoadBalancers, loadBalancerDNS)
+	nlbARN, err := awsClient.getLoadBalancerByDNS(filteredLoadBalancers, nlbDNS)
 	if err != nil {
-		ulbLogger.Error(err, "Unable to obtain load balancers matching the DNS", "Tags", tags)
+		ulbLog.Error(
+			err, "unable to obtain load balancers matching the DNS",
+			"Tags", tags,
+		)
 		return false, err
 	}
 
-	ulbLogger.Info("Load balancer matching tags and DNS found", "LoadBalancerARN", loadBalancerARN, "LoadBalancerDNS", loadBalancerDNS)
-	awsClient.updateNetworkLoadBalancerAttributes(loadBalancerARN, loadBalancerAttributes)
+	// update network load balancer attributes
+	ulbLog.Info("Load balancer matching tags and DNS found",
+		"NetowrkLoadBalancerARN", nlbARN, "NetowrkLoadBalancerDNS", nlbDNS,
+	)
+	awsClient.updateNetworkLoadBalancerAttributes(nlbARN, nlbAttributes)
 
-	targetGroupARNs, err := awsClient.getTargetGroupsByLoadBalancer(loadBalancerARN)
+	// update target group attributes
+	targetGroupARNs, err := awsClient.getTargetGroupsByLoadBalancer(nlbARN)
 	if err != nil {
-		ulbLogger.Info("Unable to obtain load balancer target groups", "loadBalancerARN", loadBalancerARN)
+		ulbLog.Error(
+			err, "unable to obtain load balancer target groups",
+			"NetowrkLoadBalancerARN", nlbARN,
+		)
 		return false, err
 	}
 	for _, targetGroupARN := range targetGroupARNs {
-		awsClient.updateNetworkTargetGroupAttribute(targetGroupARN, loadBalancerAttributes)
+		awsClient.updateNetworkTargetGroupAttribute(targetGroupARN, nlbAttributes)
 	}
 
 	return true, nil
@@ -92,15 +110,24 @@ func UpdateNetworkLoadBalancer(loadBalancerDNS string, serviceNameTagValue strin
 // newAWSConfig generates an AWS config.
 func newAWSConfig() *aws.Config {
 
-	awsRegion := os.Getenv("AWS_REGION")
+	awscfgLog := log.WithName("config")
 
-	if awsRegion == "" {
+	// set aws client region
+	awsRegion, found := os.LookupEnv("AWS_REGION")
+	if !found {
 		awsRegion = awsDefaultRegion
-		log.Info("Empty AWS_REGION, using default value", "awsRegion", awsRegion)
+		awscfgLog.Info("Empty AWS_REGION, using default value",
+			"awsRegion", awsRegion,
+		)
 	}
 
-	if (os.Getenv("AWS_ACCESS_KEY_ID") != "") && (os.Getenv("AWS_SECRET_ACCESS_KEY") != "") {
-		log.Info("Configuring AWS client using the environment credentials", "AWS_ACCESS_KEY_ID", os.Getenv("AWS_ACCESS_KEY_ID"))
+	// if key / access are set, set key / access authentication
+	if (os.Getenv("AWS_ACCESS_KEY_ID") != "") &&
+		(os.Getenv("AWS_SECRET_ACCESS_KEY") != "") {
+		awscfgLog.V(-2).Info(
+			"Configuring AWS client using the environment credentials",
+			"AWS_ACCESS_KEY_ID", os.Getenv("AWS_ACCESS_KEY_ID"),
+		)
 		return &aws.Config{
 			Region: aws.String(awsRegion),
 			Credentials: credentials.NewStaticCredentials(
@@ -111,7 +138,8 @@ func newAWSConfig() *aws.Config {
 		}
 	}
 
-	log.Info("Configuring AWS client using the service account")
+	// set service account based authentication
+	awscfgLog.V(-2).Info("Configuring AWS client using the service account")
 	return &aws.Config{Region: aws.String(awsRegion)}
 
 }
@@ -122,7 +150,7 @@ func newAPIClient() (*APIClient, error) {
 	// Initialize an AWS session
 	sess, err := session.NewSession(newAWSConfig())
 	if err != nil {
-		return nil, fmt.Errorf("Unable to initialize AWS session: %v", err)
+		return nil, fmt.Errorf("unable to initialize AWS session: %v", err)
 	}
 
 	// Return AWS clients for ELBV2 and ResourceGroupsTaggingAPI
@@ -130,10 +158,13 @@ func newAPIClient() (*APIClient, error) {
 		elbv2:  elbv2.New(sess),
 		rgtapi: resourcegroupstaggingapi.New(sess),
 	}, nil
+
 }
 
 // getLoadBalancerByDNS returns the load balancer DNS name
-func (awsc *APIClient) getLoadBalancerByDNS(loadBalancerARNs []string, loadBalancerDNS string) (string, error) {
+func (awsc *APIClient) getLoadBalancerByDNS(
+	loadBalancerARNs []string, loadBalancerDNS string) (string, error) {
+
 	dlbi := elbv2.DescribeLoadBalancersInput{}
 	for _, arn := range loadBalancerARNs {
 		dlbi.LoadBalancerArns = append(dlbi.LoadBalancerArns, aws.String(arn))
@@ -141,7 +172,10 @@ func (awsc *APIClient) getLoadBalancerByDNS(loadBalancerARNs []string, loadBalan
 
 	dlbo, err := awsc.elbv2.DescribeLoadBalancers(&dlbi)
 	if err != nil {
-		log.Error(err, "Unable to describe load balancer", "LoadBalancerARNs", loadBalancerARNs, "DescribeTargetGroupsOutput", &dlbo)
+		log.Error(
+			err, "unable to describe load balancer",
+			"LoadBalancerARNs", loadBalancerARNs, "DescribeTargetGroupsOutput", &dlbo,
+		)
 		return "", err
 	}
 
@@ -149,15 +183,18 @@ func (awsc *APIClient) getLoadBalancerByDNS(loadBalancerARNs []string, loadBalan
 		if *lb.DNSName == loadBalancerDNS {
 			return *lb.LoadBalancerArn, nil
 		}
-
 	}
 
-	return "", fmt.Errorf("Load balancer with DNS %s not found", loadBalancerDNS)
+	return "", fmt.Errorf(
+		"load balancer with DNS %s was not found", loadBalancerDNS,
+	)
+
 }
 
 // generateTagFilters generates a ResourceGroupsTaggingAPI TagFilter object from
 // a tag maps list.
-func generateTagFilters(tags map[string]string) []*resourcegroupstaggingapi.TagFilter {
+func generateTagFilters(tags map[string]string,
+) []*resourcegroupstaggingapi.TagFilter {
 	var tagFilters []*resourcegroupstaggingapi.TagFilter
 	for k, v := range tags {
 		tagFilters = append(
@@ -180,7 +217,9 @@ func (awsc *APIClient) getNetworkLoadBalancerByTag(tags map[string]string) ([]st
 }
 
 // getResourcesByFilter returns a list of arn of resources matching the filters
-func (awsc *APIClient) getResourcesByFilter(tagFilters []*resourcegroupstaggingapi.TagFilter, resourceTypeFilters []*string) ([]string, error) {
+func (awsc *APIClient) getResourcesByFilter(
+	tagFilters []*resourcegroupstaggingapi.TagFilter, resourceTypeFilters []*string,
+) ([]string, error) {
 
 	getResourcesInput := &resourcegroupstaggingapi.GetResourcesInput{
 		TagFilters:          tagFilters,
@@ -193,46 +232,57 @@ func (awsc *APIClient) getResourcesByFilter(tagFilters []*resourcegroupstagginga
 		return nil, err
 	}
 
-	loadBalanerARNs := []string{}
+	elbARNs := []string{}
 	for _, resource := range resources.ResourceTagMappingList {
-		loadBalanerARNs = append(loadBalanerARNs, *resource.ResourceARN)
+		elbARNs = append(elbARNs, *resource.ResourceARN)
 	}
-	return loadBalanerARNs, nil
+	return elbARNs, nil
 }
 
-func (awsc *APIClient) updateNetworkLoadBalancerAttributes(loadBalancerARN string, loadBalancerAttributes NetworkLoadBalancerAttributes) (bool, error) {
+// updateNetworkLoadBalancerAttributes returns the result of a nlb update
+func (awsc *APIClient) updateNetworkLoadBalancerAttributes(
+	nlbARN string, nlbAttributes NetworkLoadBalancerAttributes) (bool, error) {
 
 	mlbai := elbv2.ModifyLoadBalancerAttributesInput{
-		LoadBalancerArn: aws.String(loadBalancerARN),
+		LoadBalancerArn: aws.String(nlbARN),
 		Attributes: []*elbv2.LoadBalancerAttribute{
 			{
-				Key:   aws.String("deletion_protection.enabled"),
-				Value: aws.String(strconv.FormatBool(loadBalancerAttributes.LoadBalancerTerminationProtection)),
+				Key: aws.String("deletion_protection.enabled"),
+				Value: aws.String(
+					strconv.FormatBool(nlbAttributes.LoadBalancerTerminationProtection),
+				),
 			},
 		},
 	}
 
 	mlbao, err := awsc.elbv2.ModifyLoadBalancerAttributes(&mlbai)
 	if err != nil {
-		log.Error(err, "Unable to Modify the load balancer", "LoadBalancerARN", loadBalancerARN, "ModifyLoadBalancerAttributesOutput", &mlbao)
+		log.Error(
+			err, "unable to Modify the load balancer", "LoadBalancerARN",
+			nlbARN, "ModifyLoadBalancerAttributesOutput", &mlbao,
+		)
 		return false, err
 	}
 
-	log.Info("Load balancer updated", "ModifyLoadBalancerAttributesOutput", &mlbao)
+	log.Info("Load balancer updated",
+		"ModifyLoadBalancerAttributesOutput", &mlbao,
+	)
 	return true, nil
 }
 
 // getTargetGroupsByLoadBalancer returns a list of target groups attached to a
 // the load balancer defined by the loadBalancerARN parameter.
-func (awsc *APIClient) getTargetGroupsByLoadBalancer(loadBalancerARN string) ([]string, error) {
+func (awsc *APIClient) getTargetGroupsByLoadBalancer(elbARN string) ([]string, error) {
 
 	dlbi := elbv2.DescribeTargetGroupsInput{
-		LoadBalancerArn: aws.String(loadBalancerARN),
+		LoadBalancerArn: aws.String(elbARN),
 	}
 
 	dtgo, err := awsc.elbv2.DescribeTargetGroups(&dlbi)
 	if err != nil {
-		log.Error(err, "Unable to describe load balancer target groups", "LoadBalancerARN", loadBalancerARN, "DescribeTargetGroupsOutput", &dtgo)
+		log.Error(err, "unable to describe load balancer target groups",
+			"LoadBalancerARN", elbARN, "DescribeTargetGroupsOutput", &dtgo,
+		)
 		return nil, err
 	}
 
@@ -243,16 +293,18 @@ func (awsc *APIClient) getTargetGroupsByLoadBalancer(loadBalancerARN string) ([]
 	return targetGroupARNs, nil
 }
 
-func (awsc *APIClient) updateNetworkTargetGroupAttribute(targetGroupARN string, loadBalancerAttributes NetworkLoadBalancerAttributes) (bool, error) {
+// updateNetworkTargetGroupAttribute returns the result of updating the target groups
+func (awsc *APIClient) updateNetworkTargetGroupAttribute(
+	targetGroupARN string, nlbAttributes NetworkLoadBalancerAttributes) (bool, error) {
 
-	log.Info("Updating target group", "targetGroupARN", targetGroupARN)
+	log.V(2).Info("updating target group", "targetGroupARN", targetGroupARN)
 
 	mtgai := elbv2.ModifyTargetGroupAttributesInput{
 		TargetGroupArn: aws.String(targetGroupARN),
 		Attributes: []*elbv2.TargetGroupAttribute{
 			{
 				Key:   aws.String("stickiness.enabled"),
-				Value: aws.String(strconv.FormatBool(loadBalancerAttributes.TargetGroupStickness)),
+				Value: aws.String(strconv.FormatBool(nlbAttributes.TargetGroupStickness)),
 			},
 			{
 				Key:   aws.String("stickiness.type"),
@@ -260,21 +312,30 @@ func (awsc *APIClient) updateNetworkTargetGroupAttribute(targetGroupARN string, 
 			},
 			{
 				Key:   aws.String("proxy_protocol_v2.enabled"),
-				Value: aws.String(strconv.FormatBool(loadBalancerAttributes.TargetGroupProxyProtocol)),
+				Value: aws.String(strconv.FormatBool(nlbAttributes.TargetGroupProxyProtocol)),
 			},
 			{
 				Key:   aws.String("deregistration_delay.timeout_seconds"),
-				Value: aws.String(strconv.Itoa(loadBalancerAttributes.TargetGroupDeregistrationDelay)),
+				Value: aws.String(strconv.Itoa(nlbAttributes.TargetGroupDeregistrationDelay)),
 			},
 		},
 	}
 
 	mtgao, err := awsc.elbv2.ModifyTargetGroupAttributes(&mtgai)
+	log.V(2).Info("target groups modification result",
+		"ModifyLoadBalancerAttributesOutput", &mtgao,
+	)
 	if err != nil {
-		log.Error(err, "Unable to modify the target groups", "TargetGroupARN", targetGroupARN, "ModifyLoadBalancerAttributesOutput", &mtgao)
+		log.Error(
+			err, "unable to update the target groups",
+			"TargetGroupARN", targetGroupARN,
+		)
 		return false, err
 	}
 
-	log.Info("Target groups updated", "TargetGroupARN", targetGroupARN, "ModifyLoadBalancerAttributesOutput", &mtgao)
+	log.Info("target groups succesfully updated",
+		"TargetGroupARN", targetGroupARN,
+	)
 	return true, nil
+
 }
