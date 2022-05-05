@@ -45,7 +45,8 @@ type ServiceReconciler struct {
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch
 //+kubebuilder:rbac:groups=core,resources=services/status,verbs=get
 
-func (r *ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *ServiceReconciler) Reconcile(
+	ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
 	rLogger := r.Log.WithValues("Namespace", req.Namespace, "Service", req.Name)
@@ -69,63 +70,113 @@ func (r *ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	serviceNameTagValue := req.Namespace + "/" + req.Name
 
 	// Get the AWS Load Balancer type
-	awsLoadBalancerType := svc.GetAnnotations()[awsLoadBalancerTypeAnnotationKey]
-	if awsLoadBalancerType == "" {
-		rLogger.Info("AWS load balancer annotation key is missing, defaulting to `elb`", "awsLoadBalancerTypeAnnotationKey", awsLoadBalancerTypeAnnotationKey)
-		awsLoadBalancerType = awsLoadBalancerTypeELBAnnotationValue
+	awsELBType := svc.GetAnnotations()[awsELBTypeAnnotationKey]
+	if awsELBType == "" {
+		rLogger.Info(
+			"AWS elastic load balancer type annotation key is missing, defaulting",
+			"awsELBTypeAnnotationKey", awsELBTypeAnnotationKey,
+			"awsELBDefaultType", awsELBTypeClassicAnnotationValue,
+		)
+		awsELBType = awsELBTypeClassicAnnotationValue
 	}
-	rLogger.Info("AWS load balancer type set", "awsLoadBalancerType", awsLoadBalancerType)
+	rLogger.Info("AWS elastic load balancer type set", "awsELBType", awsELBType)
 
 	if len(svc.Status.LoadBalancer.Ingress) < 1 {
-		rLogger.Info("AWS load balancer DNS not ready.", "serviceNameTagValue", serviceNameTagValue, "loadBalancerNotReadyRetryInterval", loadBalancerNotReadyRetryInterval)
-		return reconcile.Result{RequeueAfter: loadBalancerNotReadyRetryInterval * time.Second}, nil
+		rLogger.V(2).Info(
+			"AWS elastic load balancer DNS is not ready",
+			"serviceNameTagValue", serviceNameTagValue,
+			"loadBalancerNotReadyRetryInterval", awsELBNotReadyRetryInterval,
+		)
+		return reconcile.Result{
+			RequeueAfter: awsELBNotReadyRetryInterval * time.Second,
+		}, nil
 	}
+	awsELBIngressHostname := svc.Status.LoadBalancer.Ingress[0].Hostname
+	rLogger.Info(
+		"AWS elastic load balancer hostname",
+		"awsELBDNS", awsELBIngressHostname,
+	)
 
-	awsLoadBalancerIngressHostname := svc.Status.LoadBalancer.Ingress[0].Hostname
-	rLogger.Info("AWS load balancer type set", "awsLoadBalancerDNS", awsLoadBalancerIngressHostname)
+	if awsELBType == "nlb" {
 
-	if awsLoadBalancerType == "nlb" {
-
-		awsLoadBalancerSettingsTerminationProtection, err := strconv.ParseBool(svc.GetAnnotations()[helperAnnotationLoadBalancerTerminationProtectionKey])
+		updated, err := aws.UpdateNetworkLoadBalancer(
+			awsELBIngressHostname, serviceNameTagValue,
+			r.getELBAttributesFromAnnotations(svc),
+		)
 		if err != nil {
-			rLogger.Info("Unable to parse Termination Protection value, defaulting.", "awsLoadBalancerSettingsTerminationProtection", helperAnnotationLoadBalancerTerminationProtectionDefault)
-			awsLoadBalancerSettingsTerminationProtection = helperAnnotationLoadBalancerTerminationProtectionDefault
-		}
-
-		awsLoadBalancerSettingsDeregistrationDelay, err := strconv.Atoi(svc.GetAnnotations()[helperAnnotationTargetGroupsDeregistrationDelayKey])
-		if err != nil {
-			rLogger.Info("Unable to parse Deregistration Delay value, defaulting.", "awsLoadBalancerSettingsDeregistrationDelay", helperAnnotationTargetGroupsDeregistrationDelayDefault)
-			awsLoadBalancerSettingsDeregistrationDelay = helperAnnotationTargetGroupsDeregistrationDelayDefault
-		}
-
-		awsLoadBalancerSettingsTargetGroupProxyProtocol, err := strconv.ParseBool(svc.GetAnnotations()[helperAnnotationTargetGroupsProxyProcotolKey])
-		if err != nil {
-			rLogger.Info("Unable to parse Target Group Proxy Protocol value, defaulting.", "awsLoadBalancerSettingsTargetGroupProxyProtocol", helperAnnotationTargetGroupsProxyProcotolDefault)
-			awsLoadBalancerSettingsTargetGroupProxyProtocol = helperAnnotationTargetGroupsProxyProcotolDefault
-		}
-
-		awsLoadBalancerSettingsTargetGroupStickness, err := strconv.ParseBool(svc.GetAnnotations()[helperAnnotationTargetGroupsSticknessKey])
-		if err != nil {
-			rLogger.Info("Unable to parse Target Group Sticknesss value, defaulting.", "awsLoadBalancerSettingsTargetGroupStickness", helperAnnotationTargetGroupsSticknessDefault)
-			awsLoadBalancerSettingsTargetGroupStickness = helperAnnotationTargetGroupsSticknessDefault
-		}
-
-		awsLoadBalancerSettings := aws.NetworkLoadBalancerAttributes{
-			LoadBalancerTerminationProtection: awsLoadBalancerSettingsTerminationProtection,
-			TargetGroupDeregistrationDelay:    awsLoadBalancerSettingsDeregistrationDelay,
-			TargetGroupStickness:              awsLoadBalancerSettingsTargetGroupStickness,
-			TargetGroupProxyProtocol:          awsLoadBalancerSettingsTargetGroupProxyProtocol,
-		}
-		updated, err := aws.UpdateNetworkLoadBalancer(awsLoadBalancerIngressHostname, serviceNameTagValue, awsLoadBalancerSettings)
-		if err != nil {
-			rLogger.Error(err, "Unable to update the load balancer", "awsLoadBalancerIngressHostname", awsLoadBalancerIngressHostname)
+			rLogger.Error(
+				err, "unable to update the load balancer",
+				"awsELBIngressHostname", awsELBIngressHostname,
+			)
 		}
 		if updated {
-			rLogger.Info("Load balancer updated", "awsLoadBalancerIngressHostname", awsLoadBalancerIngressHostname)
+			rLogger.Info("Load balancer updated",
+				"awsELBIngressHostname", awsELBIngressHostname,
+			)
 		}
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// getELBAttributesFromAnnotations generates the AWS network load balancer attributes from the
+// annotations
+func (r *ServiceReconciler) getELBAttributesFromAnnotations(
+	svc *corev1.Service) aws.NetworkLoadBalancerAttributes {
+
+	rLogger := r.Log.WithName("attribute")
+
+	awsELBSettingsTerminationProtection, err := strconv.ParseBool(
+		svc.GetAnnotations()[annotationLoadBalancerTerminationProtectionKey],
+	)
+	if err != nil {
+		rLogger.V(2).Info(
+			"unable to parse Termination Protection value, defaulting",
+			"awsELBSettingsTerminationProtection", annotationLoadBalancerTerminationProtectionDefault,
+		)
+		awsELBSettingsTerminationProtection = annotationLoadBalancerTerminationProtectionDefault
+	}
+
+	awsELBSettingsDeregistrationDelay, err := strconv.Atoi(
+		svc.GetAnnotations()[annotationTargetGroupsDeregistrationDelayKey],
+	)
+	if err != nil {
+		rLogger.V(2).Info(
+			"unable to parse Deregistration Delay value, defaulting",
+			"awsELBSettingsDeregistrationDelay", annotationTargetGroupsDeregistrationDelayDefault,
+		)
+		awsELBSettingsDeregistrationDelay = annotationTargetGroupsDeregistrationDelayDefault
+	}
+
+	awsELBSettingsTargetGroupProxyProtocol, err := strconv.ParseBool(
+		svc.GetAnnotations()[annotationTargetGroupsProxyProcotolKey],
+	)
+	if err != nil {
+		rLogger.V(2).Info(
+			"unable to parse Target Group Proxy Protocol value, defaulting",
+			"awsELBSettingsTargetGroupProxyProtocol", annotationTargetGroupsProxyProcotolDefault,
+		)
+		awsELBSettingsTargetGroupProxyProtocol = annotationTargetGroupsProxyProcotolDefault
+	}
+
+	awsELBSettingsTargetGroupStickness, err := strconv.ParseBool(
+		svc.GetAnnotations()[annotationTargetGroupsSticknessKey],
+	)
+	if err != nil {
+		rLogger.V(2).Info(
+			"unable to parse Target Group Sticknesss value, defaulting",
+			"awsELBSettingsTargetGroupStickness", annotationTargetGroupsSticknessDefault,
+		)
+		awsELBSettingsTargetGroupStickness = annotationTargetGroupsSticknessDefault
+	}
+
+	return aws.NetworkLoadBalancerAttributes{
+		LoadBalancerTerminationProtection: awsELBSettingsTerminationProtection,
+		TargetGroupDeregistrationDelay:    awsELBSettingsDeregistrationDelay,
+		TargetGroupStickness:              awsELBSettingsTargetGroupStickness,
+		TargetGroupProxyProtocol:          awsELBSettingsTargetGroupProxyProtocol,
+	}
+
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -143,9 +194,9 @@ func (r *ServiceReconciler) hasHelperAnnotation(annotations map[string]string) b
 }
 
 // getHelperAnnotations gets a map of strings with all the annotations matching
-// the helperAnnotationPrefix prefix using getAnnotationsByPrefix()
+// the annotationPrefix prefix using getAnnotationsByPrefix()
 func (r *ServiceReconciler) getHelperAnnotations(annotations map[string]string) map[string]string {
-	return r.getAnnotationsByPrefix(annotations, helperAnnotationPrefix)
+	return r.getAnnotationsByPrefix(annotations, annotationPrefix)
 }
 
 // getAnnotationsByPrefix gets a map of strings with all the annotations matching
@@ -189,7 +240,7 @@ func (r *ServiceReconciler) filterAnnotatedServices() predicate.Funcs {
 			return false
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			// Ignore delete function as the LoadBalancer will be deleted by the AWS controller
+			// Ignore delete function as it will be deleted by the AWS controller
 			return false
 		},
 	}
