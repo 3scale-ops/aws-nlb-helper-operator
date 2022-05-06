@@ -1,0 +1,45 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Basic Install
+  name: aws-nlb-helper-operator.v0.0.0
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions: {}
+  description: Simple operator to manage AWS NLB attributes using Kubernetes Service
+    object annotations
+  displayName: aws-nlb-helper
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      deployments: null
+    strategy: ""
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - aws
+  - nlb
+  - operator-sdk
+  links:
+  - name: Aws Nlb Helper Operator
+    url: https://aws-nlb-helper-operator.domain
+  maintainers:
+  - email: 3scale-operations@redhat.com
+    name: 3scale Ops
+  maturity: alpha
+  provider:
+    name: Red Hat
+    url: https://www.3scale.net/
+  version: 0.0.0
