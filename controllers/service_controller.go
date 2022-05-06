@@ -30,7 +30,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -47,7 +46,6 @@ type ServiceReconciler struct {
 
 func (r *ServiceReconciler) Reconcile(
 	ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
 
 	rLogger := r.Log.WithValues("Namespace", req.Namespace, "Service", req.Name)
 	rLogger.Info("Reconciling Service")
@@ -205,7 +203,7 @@ func (r *ServiceReconciler) getAnnotationsByPrefix(annotations map[string]string
 	matchingAnnotations := make(map[string]string)
 	for key, value := range annotations {
 		if strings.HasPrefix(key, annotationPrefix) {
-			r.Log.WithName("filter").V(-2).Info("Matching annotations found.",
+			r.Log.WithName("filter").V(2).Info("Matching annotations found.",
 				"AnnotationKey", key, "AnnotationValue", value,
 			)
 			matchingAnnotations[key] = value

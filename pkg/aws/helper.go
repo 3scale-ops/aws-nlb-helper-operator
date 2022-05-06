@@ -61,7 +61,7 @@ func UpdateNetworkLoadBalancer(
 		// https://github.com/3scale/aws-nlb-helper-operator/issues/1
 		// fmt.Sprintf("kubernetes.io/cluster/%s", clusterIDTagKey): "owned",
 	}
-	ulbLog.V(-2).Info("Looking for tagged resources", "Tags", tags)
+	ulbLog.V(2).Info("Looking for tagged resources", "Tags", tags)
 
 	// Get tagged network load balancers
 	filteredLoadBalancers, err := awsClient.getNetworkLoadBalancerByTag(tags)
@@ -86,7 +86,7 @@ func UpdateNetworkLoadBalancer(
 	}
 
 	// update network load balancer attributes
-	ulbLog.Info("Load balancer matching tags and DNS found",
+	ulbLog.Info("elastic load balancer matching tags and DNS found",
 		"NetowrkLoadBalancerARN", nlbARN, "NetowrkLoadBalancerDNS", nlbDNS,
 	)
 	awsClient.updateNetworkLoadBalancerAttributes(nlbARN, nlbAttributes)
@@ -116,7 +116,7 @@ func newAWSConfig() *aws.Config {
 	awsRegion, found := os.LookupEnv("AWS_REGION")
 	if !found {
 		awsRegion = awsDefaultRegion
-		awscfgLog.Info("Empty AWS_REGION, using default value",
+		awscfgLog.Info("Empty AWS_REGION, defaulting",
 			"awsRegion", awsRegion,
 		)
 	}
@@ -124,7 +124,7 @@ func newAWSConfig() *aws.Config {
 	// if key / access are set, set key / access authentication
 	if (os.Getenv("AWS_ACCESS_KEY_ID") != "") &&
 		(os.Getenv("AWS_SECRET_ACCESS_KEY") != "") {
-		awscfgLog.V(-2).Info(
+		awscfgLog.V(2).Info(
 			"Configuring AWS client using the environment credentials",
 			"AWS_ACCESS_KEY_ID", os.Getenv("AWS_ACCESS_KEY_ID"),
 		)
@@ -139,7 +139,7 @@ func newAWSConfig() *aws.Config {
 	}
 
 	// set service account based authentication
-	awscfgLog.V(-2).Info("Configuring AWS client using the service account")
+	awscfgLog.V(2).Info("Configuring AWS client using the service account")
 	return &aws.Config{Region: aws.String(awsRegion)}
 
 }
@@ -256,17 +256,19 @@ func (awsc *APIClient) updateNetworkLoadBalancerAttributes(
 	}
 
 	mlbao, err := awsc.elbv2.ModifyLoadBalancerAttributes(&mlbai)
+	log.V(2).Info("Modify load balancer aws command output",
+		"ModifyLoadBalancerAttributesOutput", &mlbao,
+	)
+
 	if err != nil {
 		log.Error(
-			err, "unable to Modify the load balancer", "LoadBalancerARN",
-			nlbARN, "ModifyLoadBalancerAttributesOutput", &mlbao,
+			err, "unable to modify the network load balancer",
+			"NetworkLoadBalancerARN", nlbARN,
 		)
 		return false, err
 	}
 
-	log.Info("Load balancer updated",
-		"ModifyLoadBalancerAttributesOutput", &mlbao,
-	)
+	log.Info("Network load balancer updated", "NetworkLoadBalancerARN", nlbARN)
 	return true, nil
 }
 
@@ -297,7 +299,7 @@ func (awsc *APIClient) getTargetGroupsByLoadBalancer(elbARN string) ([]string, e
 func (awsc *APIClient) updateNetworkTargetGroupAttribute(
 	targetGroupARN string, nlbAttributes NetworkLoadBalancerAttributes) (bool, error) {
 
-	log.V(2).Info("updating target group", "targetGroupARN", targetGroupARN)
+	log.V(2).Info("Updating target group", "targetGroupARN", targetGroupARN)
 
 	mtgai := elbv2.ModifyTargetGroupAttributesInput{
 		TargetGroupArn: aws.String(targetGroupARN),
@@ -322,9 +324,10 @@ func (awsc *APIClient) updateNetworkTargetGroupAttribute(
 	}
 
 	mtgao, err := awsc.elbv2.ModifyTargetGroupAttributes(&mtgai)
-	log.V(2).Info("target groups modification result",
-		"ModifyLoadBalancerAttributesOutput", &mtgao,
+	log.V(2).Info("Modify target group aws command output",
+		"ModifyTargetGroupAttributesOutput", &mtgao,
 	)
+
 	if err != nil {
 		log.Error(
 			err, "unable to update the target groups",
@@ -333,7 +336,7 @@ func (awsc *APIClient) updateNetworkTargetGroupAttribute(
 		return false, err
 	}
 
-	log.Info("target groups succesfully updated",
+	log.Info("Target groups succesfully updated",
 		"TargetGroupARN", targetGroupARN,
 	)
 	return true, nil
