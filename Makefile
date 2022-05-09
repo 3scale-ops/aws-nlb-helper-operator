@@ -32,6 +32,9 @@ IMAGE_TAG_BASE ?= quay.io/3scale/aws-nlb-helper-operator
 # BUNDLE_IMG defines the image:tag used for the bundle.
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 
+# BUNDLE_IMG_LATEST defines the image:tag used for the bundle.
+BUNDLE_IMG_LATEST ?= $(IMAGE_TAG_BASE)-bundle:latest
+
 # BUNDLE_GEN_FLAGS are the flags passed to the operator-sdk generate bundle command
 BUNDLE_GEN_FLAGS ?= -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 
@@ -119,6 +122,10 @@ container-build: test ## Build container image with the manager.
 .PHONY: container-push
 container-push: ## Push container image with the manager.
 	$(CONTAINER_RUNTIME) push ${IMG}
+
+.PHONY: container-tag
+container-tag: ## Push container image with the manager.
+	$(CONTAINER_RUNTIME) tag ${IMG} ${IMG_LATEST}
 
 ##@ Deployment
 
@@ -211,6 +218,9 @@ BUNDLE_IMGS ?= $(BUNDLE_IMG)
 # The image tag given to the resulting catalog image (e.g. make catalog-build CATALOG_IMG=example.com/operator-catalog:v0.2.0).
 CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:v$(VERSION)
 
+# The latest image tag given to the resulting catalog image (e.g. make catalog-build CATALOG_IMG=example.com/operator-catalog:v0.2.0).
+CATALOG_IMG_LATEST ?= $(IMAGE_TAG_BASE)-catalog:latest
+
 # Set CATALOG_BASE_IMG to an existing catalog image tag to add $BUNDLE_IMGS to that image.
 ifneq ($(origin CATALOG_BASE_IMG), undefined)
 FROM_INDEX_OPT := --from-index $(CATALOG_BASE_IMG)
@@ -227,3 +237,19 @@ catalog-build: opm ## Build a catalog image.
 .PHONY: catalog-push
 catalog-push: ## Push a catalog image.
 	$(MAKE) container-push IMG=$(CATALOG_IMG)
+
+##@ Release
+
+prepare-alpha-release: bump-release generate fmt vet manifests bundle ## Generates bundle manifests for alpha channel release
+
+prepare-stable-release: bump-release generate fmt vet manifests bundle ## Generates bundle manifests for stable channel release
+	$(MAKE) bundle CHANNELS=alpha,stable DEFAULT_CHANNEL=alpha
+
+bump-release: ## Write release name to "pkg/version" package
+	sed -i 's/version string = "v\(.*\)"/version string = "v$(VERSION)"/g' pkg/version/version.go
+
+bundle-publish: bundle-build bundle-push catalog-build catalog-push catalog-retag-latest ## Generates and pushes all required images for a release
+
+catalog-retag-latest:
+	$(MAKE) container-tag IMG=$(CATALOG_IMG) IMG_LATEST=$(CATALOG_IMG_LATEST)
+	$(MAKE) container-push IMG=$(CATALOG_IMG_LATEST)
