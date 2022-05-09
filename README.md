@@ -10,8 +10,7 @@
 This operator allows to manage some settings for AWS Network Load Balanacer using
 Kubernetes annotations in the service objects.
 
-**Disclaimer**: This operator is in the early development stages, at v0.0.2 works
-but lacks testing and some code improvements.
+**Disclaimer**: This operator is in the early development stages.
 
 ## Motivations
 
