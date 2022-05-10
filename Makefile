@@ -256,3 +256,12 @@ bundle-publish: bundle-build bundle-push catalog-build catalog-push catalog-reta
 catalog-retag-latest:
 	$(MAKE) container-tag IMG=$(CATALOG_IMG) IMG_LATEST=$(CATALOG_IMG_LATEST)
 	$(MAKE) container-push IMG=$(CATALOG_IMG_LATEST)
+
+GH_REPO ?= 3scale-ops/aws-nlb-helper-operator
+GH_REPO_RELEASES_URL ?= https://api.github.com/repos/$(GH_REPO)/releases/tags
+
+get-new-release:
+	@if [[ v$(VERSION) == *"-alpha"* ]]; then echo; \
+	elif curl -o /dev/null --fail --silent \
+		"$(GH_REPO_RELEASES_URL)/v$(VERSION)"; then echo; \
+	else echo "v$(VERSION)"; fi;
