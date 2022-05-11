@@ -91,6 +91,16 @@ spec:
           secretKeyRef:
             name: aws-nlb-helper-iam
             key: AWS_REGION
+---
+apiVersion: operators.coreos.com/v1alpha2
+kind: OperatorGroup
+metadata:
+  name: aws-nlb-helper
+  namespace: aws-nlb-helper
+spec:
+  targetNamespaces:
+    - 3scale-saas
+    - aws-nlb-helper
 ```
 
 ## Requirements
