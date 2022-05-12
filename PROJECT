@@ -1,0 +1,15 @@
+domain: aws-nlb-helper.3scale.net
+layout:
+- go.kubebuilder.io/v3
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: aws-nlb-helper-operator
+repo: github.com/3scale-ops/aws-nlb-helper-operator
+resources:
+- controller: true
+  group: core
+  kind: Service
+  path: k8s.io/api/core/v1
+  version: v1
+version: "3"

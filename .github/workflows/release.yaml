@@ -1,61 +1,68 @@
 name: release
 
 on:
-
-  release:
-    types:
-      - published
+  push:
+    branches:
+      - main
 
 jobs:
-
-  release:
-    env:
-      image: aws-nlb-helper-operator
-    runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Setup Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: '1.14.0'
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.17.9"
 
-    - name: Run build
-      run: |
-        make build
+      - uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: ${{ runner.os }}-go-
 
-    - name: Run build
-      run: |
-        make test
+      - uses: actions/cache@v2
+        with:
+          path: ./testbin
+          key: ${{ runner.os }}-testbin
 
-    - name: Get image tag
-      id: image_tag
-      run: |
-        echo -n ::set-output name=TAG::
-        TAG=latest
-        if [[ $GITHUB_REF == refs/tags/* ]]; then
-          TAG=${GITHUB_REF#refs/tags/}
-        fi
-        ( echo "${TAG}" )
+      - uses: actions/cache@v2
+        with:
+          path: ./bin
+          key: ${{ runner.os }}-bin
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v1
+      - name: Run tests
+        run: make test
 
-    - name: Login to the container registry
-      uses: docker/login-action@v1
-      with:
-        registry: ${{ secrets.REGISTRY_SERVER }}
-        username: ${{ secrets.REGISTRY_USERNAME }}
-        password: ${{ secrets.REGISTRY_PASSWORD }}
+      - name: Build image
+        run: make docker-build
 
-    - name: Push to the container registry
-      id: docker_build
-      uses: docker/build-push-action@v2
-      with:
-        context: .
-        file: build/Dockerfile
-        tags: ${{ secrets.REGISTRY_SERVER }}/${{ secrets.REGISTRY_NAMESPACE }}/${{ env.image }}:${{ steps.image_tag.outputs.TAG }}
-        push: true
+      - name: Export release name
+        run: |
+          echo "NEW_RELEASE=$(make get-new-release)" >> $GITHUB_ENV
 
-    - name: Image digest
-      run: echo ${{ steps.docker_build.outputs.digest }}
+      - name: Login to quay.io/3scale
+        if: ${{ env.NEW_RELEASE != '' }}
+        uses: docker/login-action@v1
+        with:
+          registry: quay.io
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Push new operator image
+        if: ${{ env.NEW_RELEASE != '' }}
+        run: make container-push
+
+      - name: Publish new bundle image in saas-operator catalog
+        if: ${{ env.NEW_RELEASE != '' }}
+        run: make bundle-publish
+
+      - name: Create a new draft-release in github
+        if: ${{ env.NEW_RELEASE != '' }}
+        uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "${{ env.NEW_RELEASE }}"
+          title: "${{ env.NEW_RELEASE }}"
+          draft: true

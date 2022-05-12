@@ -10,8 +10,7 @@
 This operator allows to manage some settings for AWS Network Load Balanacer using
 Kubernetes annotations in the service objects.
 
-**Disclaimer**: This operator is in the early development stages, at v0.0.2 works
-but lacks testing and some code improvements.
+**Disclaimer**: This operator is in the early development stages.
 
 ## Motivations
 
@@ -37,6 +36,72 @@ connect to the AWS API. The YAMLs for deploying using [IAM roles for service acc
 Otherwise, if the environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are set,
 the operator will use them to interact with the AWS API. You can find the YAMLs
 for deploying the resources using the environment access keys at [deploy/iam-env-credentials](deploy/iam-env-credentials).
+
+## OLM installation
+
+At this stage, we use a custom `CatalogSource` specific for this operator:
+
+```yaml
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: aws-nlb-helper-operator-catalog
+  namespace: openshift-marketplace
+  # Installed openshift-marketplace to enable multi-namespace support
+  # - https://bugzilla.redhat.com/show_bug.cgi?id=1779080
+spec:
+  sourceType: grpc
+  image: quay.io/3scale/aws-nlb-helper-operator-catalog:latest
+  displayName: AWS NLB Helper Operator
+  updateStrategy:
+    registryPoll:
+      interval: 30m
+```
+
+And can be installed via `Subscription`:
+
+```yaml
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: operators.coreos.com/v1alpha2
+    kind: OperatorGroup
+    metadata:
+      name: aws-nlb-helper
+      namespace: aws-nlb-helper
+    spec:
+      targetNamespaces:
+        - 3scale-saas
+        - aws-nlb-helper
+  - apiVersion: operators.coreos.com/v1alpha1
+    kind: Subscription
+    metadata:
+      name: aws-nlb-helper-operator
+      namespace: aws-nlb-helper
+    spec:
+      channel: alpha
+      installPlanApproval: Automatic
+      name: aws-nlb-helper-operator
+      source: aws-nlb-helper-operator-catalog
+      sourceNamespace: openshift-marketplace
+      config:
+        env:
+          - name: AWS_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name: aws-nlb-helper-iam
+                key: AWS_ACCESS_KEY_ID
+          - name: AWS_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: aws-nlb-helper-iam
+                key: AWS_SECRET_ACCESS_KEY
+          - name: AWS_REGION
+            valueFrom:
+              secretKeyRef:
+                name: aws-nlb-helper-iam
+                key: AWS_REGION
+```
 
 ## Requirements
 
@@ -99,44 +164,30 @@ resource "aws_iam_access_key" "this" {
 }
 ```
 
-## Deployment
+## Manual Deployment
 
-```bash
-❯ make operator-deploy
-kubectl create namespace aws-nlb-helper || true
-namespace/aws-nlb-helper created
-kubectl apply -n aws-nlb-helper -f deploy/aws_iam.yaml
-secret/aws-nlb-helper-iam created
-kubectl apply -n aws-nlb-helper -f deploy/service_account.yaml
-serviceaccount/aws-nlb-helper-operator created
-kubectl apply -n aws-nlb-helper -f deploy/role.yaml
-role.rbac.authorization.k8s.io/aws-nlb-helper-operator created
-kubectl apply -n aws-nlb-helper -f deploy/role_binding.yaml
-rolebinding.rbac.authorization.k8s.io/aws-nlb-helper-operator created
-sed -i "" 's@REPLACE_IMAGE@quay.io/3scale/aws-nlb-helper-operator:v0.0.2@g' deploy/operator.yaml
-kubectl apply -n aws-nlb-helper -f deploy/operator.yaml
-deployment.apps/aws-nlb-helper-operator created
-sed -i "" 's@quay.io/3scale/aws-nlb-helper-operator:v0.0.2@REPLACE_IMAGE@g' deploy/operator.yaml
+For manualy deployment, check the available `Deployment` targets with `make help`.
+
+```
+...
+Deployment
+  install          Install CRDs into the K8s cluster specified in ~/.kube/config.
+  uninstall        Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+  deploy           Deploy controller to the K8s cluster specified in ~/.kube/config.
+  deploy-iam-env   Deploy controller using env IAM variables to the K8s cluster specified in ~/.kube/config.
+  undeploy         Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+...
 ```
 
-```bash
-❯ kubectl logs -n aws-nlb-helper -f `k get -n aws-nlb-helper pods -l name=aws-nlb-helper-operator -o name`
-{"level":"info","ts":1591382482.7026253,"logger":"cmd","msg":"Operator Version: 0.0.1"}
-{"level":"info","ts":1591382482.7030494,"logger":"cmd","msg":"Go Version: go1.13.7"}
-{"level":"info","ts":1591382482.7030537,"logger":"cmd","msg":"Go OS/Arch: linux/amd64"}
-{"level":"info","ts":1591382482.7030568,"logger":"cmd","msg":"Version of operator-sdk: v0.17.1"}
-{"level":"info","ts":1591382482.7043262,"logger":"leader","msg":"Trying to become the leader."}
-{"level":"info","ts":1591382485.50146,"logger":"leader","msg":"No pre-existing lock was found."}
-{"level":"info","ts":1591382485.5110912,"logger":"leader","msg":"Became the leader."}
-{"level":"info","ts":1591382488.1714578,"logger":"controller-runtime.metrics","msg":"metrics server is starting to listen","addr":"0.0.0.0:8383"}
-{"level":"info","ts":1591382488.1717732,"logger":"cmd","msg":"Registering Components."}
-{"level":"info","ts":1591382488.1717985,"logger":"controller_service","msg":"Looking for Services with an aws-nlb-helper annotation"}
-{"level":"info","ts":1591382490.8642957,"logger":"metrics","msg":"Metrics Service object created","Service.Name":"aws-nlb-helper-operator-metrics","Service.Namespace":"aws-nlb-helper"}
-{"level":"info","ts":1591382493.6093283,"logger":"cmd","msg":"Starting the Cmd."}
-{"level":"info","ts":1591382493.6095302,"logger":"controller-runtime.manager","msg":"starting metrics server","path":"/metrics"}
-{"level":"info","ts":1591382493.6095517,"logger":"controller-runtime.controller","msg":"Starting EventSource","controller":"service-controller","source":"kind source: /, Kind="}
-{"level":"info","ts":1591382493.7098615,"logger":"controller-runtime.controller","msg":"Starting Controller","controller":"service-controller"}
-{"level":"info","ts":1591382493.7098913,"logger":"controller-runtime.controller","msg":"Starting workers","controller":"service-controller","worker count":1}
+Deploy manifests can be generated to the `./deploy/` folder using the
+`make generate-deploy-manifests` and `make generate-deploy-manifests-with-iam-env` targets:
+
+```
+...
+Generate deployment manifests
+  generate-deploy-manifests  Generate the controller manifests to the ./deploy folder.
+  generate-deploy-manifests-iam-env  Generate the controller manifests using env IAM variables to the ./deploy folder.
+...
 ```
 
 ### Example service
