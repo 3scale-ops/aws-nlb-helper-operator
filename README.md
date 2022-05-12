@@ -168,6 +168,28 @@ resource "aws_iam_access_key" "this" {
 
 For manualy deployment, check the available `Deployment` targets with `make help`.
 
+```
+...
+Deployment
+  install          Install CRDs into the K8s cluster specified in ~/.kube/config.
+  uninstall        Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+  deploy           Deploy controller to the K8s cluster specified in ~/.kube/config.
+  deploy-iam-env   Deploy controller using env IAM variables to the K8s cluster specified in ~/.kube/config.
+  undeploy         Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+...
+```
+
+Deploy manifests can be generated to the `./deploy/` folder using the
+`make generate-deploy-manifests` and `make generate-deploy-manifests-with-iam-env` targets:
+
+```
+...
+Generate deployment manifests
+  generate-deploy-manifests  Generate the controller manifests to the ./deploy folder.
+  generate-deploy-manifests-iam-env  Generate the controller manifests using env IAM variables to the ./deploy folder.
+...
+```
+
 ### Example service
 
 ```yaml

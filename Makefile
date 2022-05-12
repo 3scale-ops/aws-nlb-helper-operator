@@ -149,6 +149,13 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
+.PHONY: deploy-iam-env
+deploy-iam-env: manifests kustomize ## Deploy controller using env IAM variables to the K8s cluster specified in ~/.kube/config.
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit add patch --path manager_env_iamcredentials_patch.yaml
+	$(KUSTOMIZE) build config/default | kubectl apply -f -
+	cd config/manager && $(KUSTOMIZE) edit remove patch --path manager_env_iamcredentials_patch.yaml
+
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
@@ -240,6 +247,27 @@ catalog-build: opm ## Build a catalog image.
 .PHONY: catalog-push
 catalog-push: ## Push a catalog image.
 	$(MAKE) container-push IMG=$(CATALOG_IMG)
+
+##@ Generate deployment manifests
+
+.PHONY: generate-deploy-manifests
+generate-deploy-manifests: manifests kustomize ## Generate the controller manifests to the ./deploy folder.
+	@mkdir -p deploy
+	@cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default  > deploy/aws-nlb-helper.yaml
+	@echo "Deployment manifest generated in deploy/aws-nlb-helper-iam-env.yaml."
+
+.PHONY: generate-deploy-manifests-iam-env
+generate-deploy-manifests-iam-env: manifests kustomize ## Generate the controller manifests using env IAM variables to the ./deploy folder.
+	@mkdir -p deploy
+	@cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	@cd config/manager && $(KUSTOMIZE) edit add patch --path manager_env_iamcredentials_patch.yaml
+	@$(KUSTOMIZE) build config/default > deploy/aws-nlb-helper-iam-env.yaml
+	@cd config/manager && $(KUSTOMIZE) edit remove patch --path manager_env_iamcredentials_patch.yaml
+	@echo "Deployment manifest generated in deploy/aws-nlb-helper-iam-env.yaml."
+	@echo "The controller manager will require an existing secret named" \
+		"aws-nlb-helper-iam with the following information:" \
+		"AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_REGION."
 
 ##@ Release
 
