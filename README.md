@@ -61,46 +61,46 @@ spec:
 And can be installed via `Subscription`:
 
 ```yaml
-apiVersion: operators.coreos.com/v1alpha1
-kind: Subscription
-metadata:
-  name: aws-nlb-helper-operator
-  namespace: aws-nlb-helper
-spec:
-  channel: alpha
-  installPlanApproval: Automatic
-  name: aws-nlb-helper-operator
-  source: aws-nlb-helper-operator-catalog
-  sourceNamespace: openshift-marketplace
-  config:
-    env:
-      - name: WATCH_NAMESPACE
-        value: aws-nlb-helper,3scale-saas
-      - name: AWS_ACCESS_KEY_ID
-        valueFrom:
-          secretKeyRef:
-            name: aws-nlb-helper-iam
-            key: AWS_ACCESS_KEY_ID
-      - name: AWS_SECRET_ACCESS_KEY
-        valueFrom:
-          secretKeyRef:
-            name: aws-nlb-helper-iam
-            key: AWS_SECRET_ACCESS_KEY
-      - name: AWS_REGION
-        valueFrom:
-          secretKeyRef:
-            name: aws-nlb-helper-iam
-            key: AWS_REGION
----
-apiVersion: operators.coreos.com/v1alpha2
-kind: OperatorGroup
-metadata:
-  name: aws-nlb-helper
-  namespace: aws-nlb-helper
-spec:
-  targetNamespaces:
-    - 3scale-saas
-    - aws-nlb-helper
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: operators.coreos.com/v1alpha2
+    kind: OperatorGroup
+    metadata:
+      name: aws-nlb-helper
+      namespace: aws-nlb-helper
+    spec:
+      targetNamespaces:
+        - 3scale-saas
+        - aws-nlb-helper
+  - apiVersion: operators.coreos.com/v1alpha1
+    kind: Subscription
+    metadata:
+      name: aws-nlb-helper-operator
+      namespace: aws-nlb-helper
+    spec:
+      channel: alpha
+      installPlanApproval: Automatic
+      name: aws-nlb-helper-operator
+      source: aws-nlb-helper-operator-catalog
+      sourceNamespace: openshift-marketplace
+      config:
+        env:
+          - name: AWS_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name: aws-nlb-helper-iam
+                key: AWS_ACCESS_KEY_ID
+          - name: AWS_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: aws-nlb-helper-iam
+                key: AWS_SECRET_ACCESS_KEY
+          - name: AWS_REGION
+            valueFrom:
+              secretKeyRef:
+                name: aws-nlb-helper-iam
+                key: AWS_REGION
 ```
 
 ## Requirements
