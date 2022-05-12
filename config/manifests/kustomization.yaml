@@ -3,5 +3,4 @@
 resources:
   - bases/aws-nlb-helper-operator.clusterserviceversion.yaml
   - ../default
-  - ../samples
   - ../scorecard
