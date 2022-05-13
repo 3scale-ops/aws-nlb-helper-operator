@@ -54,6 +54,10 @@ jobs:
         if: ${{ env.NEW_RELEASE != '' }}
         run: make container-push
 
+      - name: Push new operator image as latest
+        if: ${{ env.NEW_RELEASE != '' }}
+        run: make operator-push-latest
+
       - name: Publish new bundle image in saas-operator catalog
         if: ${{ env.NEW_RELEASE != '' }}
         run: make bundle-publish

@@ -50,6 +50,9 @@ IMG_TAG ?= v$(VERSION)
 # Image URL to use all building/pushing image targets
 IMG ?= $(IMAGE_TAG_BASE):$(IMG_TAG)
 
+# Image URL to use latest building/pushing image targets
+IMG_LATEST ?= $(IMAGE_TAG_BASE):latest
+
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.23
 
@@ -128,7 +131,7 @@ container-push: ## Push container image with the manager.
 
 .PHONY: container-tag
 container-tag: ## Push container image with the manager.
-	$(CONTAINER_RUNTIME) tag ${IMG} ${IMG_LATEST}
+	$(CONTAINER_RUNTIME) tag ${IMG} ${IMG_RETAG}
 
 ##@ Deployment
 
@@ -282,11 +285,16 @@ bump-release: ## Write release name to "pkg/version" package
 bundle-publish: bundle-build bundle-push catalog-build catalog-push catalog-retag-latest ## Generates and pushes all required images for a release
 
 catalog-retag-latest:
-	$(MAKE) container-tag IMG=$(CATALOG_IMG) IMG_LATEST=$(CATALOG_IMG_LATEST)
+	$(MAKE) container-tag IMG=$(CATALOG_IMG) IMG_RETAG=$(CATALOG_IMG_LATEST)
 	$(MAKE) container-push IMG=$(CATALOG_IMG_LATEST)
 
 GH_REPO ?= 3scale-ops/aws-nlb-helper-operator
 GH_REPO_RELEASES_URL ?= https://api.github.com/repos/$(GH_REPO)/releases/tags
+
+.PHONY: operator-push-latest
+operator-push-latest: ## Push latest operator container image with the manager.
+	$(MAKE) container-tag IMG=$(IMG) IMG_RETAG=$(IMG_LATEST)
+	$(CONTAINER_RUNTIME) push ${IMG_LATEST}
 
 get-new-release:
 	@if [[ v$(VERSION) == *"-alpha"* ]]; then echo; \
