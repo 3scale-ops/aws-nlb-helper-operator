@@ -13,4 +13,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: quay.io/3scale/aws-nlb-helper-operator
-  newTag: v0.1.0
+  newTag: v0.1.1-alpha.1
