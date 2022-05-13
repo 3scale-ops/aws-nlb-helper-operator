@@ -1,0 +1,16 @@
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    control-plane: controller-manager
+  name: aws-nlb-helper-operator-controller-manager-metrics-service
+spec:
+  ports:
+  - name: metrics
+    port: 8080
+    protocol: TCP
+    targetPort: metrics
+  selector:
+    control-plane: controller-manager
+status:
+  loadBalancer: {}

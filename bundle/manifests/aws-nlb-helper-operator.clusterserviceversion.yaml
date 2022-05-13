@@ -139,6 +139,7 @@ spec:
               containers:
               - args:
                 - --leader-elect
+                - --metrics-bind-address=0.0.0.0:8080
                 command:
                 - /manager
                 env:
@@ -154,6 +155,9 @@ spec:
                   initialDelaySeconds: 15
                   periodSeconds: 20
                 name: manager
+                ports:
+                - containerPort: 8080
+                  name: metrics
                 readinessProbe:
                   httpGet:
                     path: /readyz
