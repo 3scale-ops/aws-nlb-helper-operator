@@ -14,7 +14,7 @@ metadata:
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/3scale-ops/aws-nlb-helper-operator
     support: Red Hat
-  name: aws-nlb-helper-operator.v0.1.0
+  name: aws-nlb-helper-operator.v0.1.1
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -118,18 +118,6 @@ spec:
           - services/status
           verbs:
           - get
-        - apiGroups:
-          - authentication.k8s.io
-          resources:
-          - tokenreviews
-          verbs:
-          - create
-        - apiGroups:
-          - authorization.k8s.io
-          resources:
-          - subjectaccessreviews
-          verbs:
-          - create
         serviceAccountName: aws-nlb-helper-operator-controller-manager
       deployments:
       - label:
@@ -150,9 +138,8 @@ spec:
             spec:
               containers:
               - args:
-                - --health-probe-bind-address=:8081
-                - --metrics-bind-address=127.0.0.1:8080
                 - --leader-elect
+                - --metrics-bind-address=0.0.0.0:8080
                 command:
                 - /manager
                 env:
@@ -160,7 +147,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/3scale/aws-nlb-helper-operator:v0.1.0
+                image: quay.io/3scale/aws-nlb-helper-operator:v0.1.1
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -168,6 +155,9 @@ spec:
                   initialDelaySeconds: 15
                   periodSeconds: 20
                 name: manager
+                ports:
+                - containerPort: 8080
+                  name: metrics
                 readinessProbe:
                   httpGet:
                     path: /readyz
@@ -183,24 +173,6 @@ spec:
                     memory: 64Mi
                 securityContext:
                   allowPrivilegeEscalation: false
-              - args:
-                - --secure-listen-address=0.0.0.0:8443
-                - --upstream=http://127.0.0.1:8080/
-                - --logtostderr=true
-                - --v=0
-                image: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
-                name: kube-rbac-proxy
-                ports:
-                - containerPort: 8443
-                  name: https
-                  protocol: TCP
-                resources:
-                  limits:
-                    cpu: 500m
-                    memory: 128Mi
-                  requests:
-                    cpu: 5m
-                    memory: 64Mi
               securityContext:
                 runAsNonRoot: true
               serviceAccountName: aws-nlb-helper-operator-controller-manager
@@ -265,4 +237,4 @@ spec:
   provider:
     name: Red Hat
     url: https://www.3scale.net/
-  version: 0.1.0
+  version: 0.1.1

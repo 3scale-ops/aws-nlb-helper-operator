@@ -3,7 +3,7 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 0.1.0
+VERSION ?= 0.1.1
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -49,6 +49,9 @@ IMG_TAG ?= v$(VERSION)
 
 # Image URL to use all building/pushing image targets
 IMG ?= $(IMAGE_TAG_BASE):$(IMG_TAG)
+
+# Image URL to use latest building/pushing image targets
+IMG_LATEST ?= $(IMAGE_TAG_BASE):latest
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.23
@@ -128,7 +131,7 @@ container-push: ## Push container image with the manager.
 
 .PHONY: container-tag
 container-tag: ## Push container image with the manager.
-	$(CONTAINER_RUNTIME) tag ${IMG} ${IMG_LATEST}
+	$(CONTAINER_RUNTIME) tag ${IMG} ${IMG_RETAG}
 
 ##@ Deployment
 
@@ -229,7 +232,7 @@ BUNDLE_IMGS ?= $(BUNDLE_IMG)
 CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:v$(VERSION)
 
 # The latest image tag given to the resulting catalog image (e.g. make catalog-build CATALOG_IMG=example.com/operator-catalog:v0.2.0).
-CATALOG_IMG_LATEST ?= $(IMAGE_TAG_BASE)-catalog:latest
+CATALOG_BASE_IMG ?= $(IMAGE_TAG_BASE)-catalog:latest
 
 # Set CATALOG_BASE_IMG to an existing catalog image tag to add $BUNDLE_IMGS to that image.
 ifneq ($(origin CATALOG_BASE_IMG), undefined)
@@ -282,11 +285,16 @@ bump-release: ## Write release name to "pkg/version" package
 bundle-publish: bundle-build bundle-push catalog-build catalog-push catalog-retag-latest ## Generates and pushes all required images for a release
 
 catalog-retag-latest:
-	$(MAKE) container-tag IMG=$(CATALOG_IMG) IMG_LATEST=$(CATALOG_IMG_LATEST)
-	$(MAKE) container-push IMG=$(CATALOG_IMG_LATEST)
+	$(MAKE) container-tag IMG=$(CATALOG_IMG) IMG_RETAG=$(CATALOG_BASE_IMG)
+	$(MAKE) container-push IMG=$(CATALOG_BASE_IMG)
 
 GH_REPO ?= 3scale-ops/aws-nlb-helper-operator
 GH_REPO_RELEASES_URL ?= https://api.github.com/repos/$(GH_REPO)/releases/tags
+
+.PHONY: operator-push-latest
+operator-push-latest: ## Push latest operator container image with the manager.
+	$(MAKE) container-tag IMG=$(IMG) IMG_RETAG=$(IMG_LATEST)
+	$(CONTAINER_RUNTIME) push ${IMG_LATEST}
 
 get-new-release:
 	@if [[ v$(VERSION) == *"-alpha"* ]]; then echo; \
