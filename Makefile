@@ -232,7 +232,7 @@ BUNDLE_IMGS ?= $(BUNDLE_IMG)
 CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:v$(VERSION)
 
 # The latest image tag given to the resulting catalog image (e.g. make catalog-build CATALOG_IMG=example.com/operator-catalog:v0.2.0).
-CATALOG_IMG_LATEST ?= $(IMAGE_TAG_BASE)-catalog:latest
+CATALOG_BASE_IMG ?= $(IMAGE_TAG_BASE)-catalog:latest
 
 # Set CATALOG_BASE_IMG to an existing catalog image tag to add $BUNDLE_IMGS to that image.
 ifneq ($(origin CATALOG_BASE_IMG), undefined)
@@ -285,8 +285,8 @@ bump-release: ## Write release name to "pkg/version" package
 bundle-publish: bundle-build bundle-push catalog-build catalog-push catalog-retag-latest ## Generates and pushes all required images for a release
 
 catalog-retag-latest:
-	$(MAKE) container-tag IMG=$(CATALOG_IMG) IMG_RETAG=$(CATALOG_IMG_LATEST)
-	$(MAKE) container-push IMG=$(CATALOG_IMG_LATEST)
+	$(MAKE) container-tag IMG=$(CATALOG_IMG) IMG_RETAG=$(CATALOG_BASE_IMG)
+	$(MAKE) container-push IMG=$(CATALOG_BASE_IMG)
 
 GH_REPO ?= 3scale-ops/aws-nlb-helper-operator
 GH_REPO_RELEASES_URL ?= https://api.github.com/repos/$(GH_REPO)/releases/tags
