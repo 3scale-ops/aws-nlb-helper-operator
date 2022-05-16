@@ -14,7 +14,7 @@ metadata:
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/3scale-ops/aws-nlb-helper-operator
     support: Red Hat
-  name: aws-nlb-helper-operator.v0.1.1-alpha.1
+  name: aws-nlb-helper-operator.v0.1.1
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -147,7 +147,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/3scale/aws-nlb-helper-operator:v0.1.1-alpha.1
+                image: quay.io/3scale/aws-nlb-helper-operator:v0.1.1
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -237,4 +237,4 @@ spec:
   provider:
     name: Red Hat
     url: https://www.3scale.net/
-  version: 0.1.1-alpha.1
+  version: 0.1.1
