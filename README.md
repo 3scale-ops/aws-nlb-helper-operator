@@ -1,3 +1,9 @@
+# DEPRECATED
+
+The official [aws-load-balancer-operator](https://github.com/openshift/aws-load-balancer-operator) now fully support NLB, so this operator is no longer needed.
+
+---
+
 [![Go Report Card](https://goreportcard.com/badge/github.com/3scale/aws-nlb-helper-operator)](https://goreportcard.com/report/github.com/3scale/aws-nlb-helper-operator)
 [![build](https://github.com/3scale-ops/aws-nlb-helper-operator/workflows/build/badge.svg)](https://github.com/3scale-ops/aws-nlb-helper-operator/actions?query=workflow%3Abuild)
 [![latest](https://github.com/3scale-ops/aws-nlb-helper-operator/workflows/latest/badge.svg)](https://github.com/3scale-ops/aws-nlb-helper-operator/actions?query=workflow%3Alatest)
